@@ -16,7 +16,12 @@ import {
 } from 'lucide-react-native';
 
 import { colors } from '../theme/colors';
-import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
+import { MemberFindScreen } from '../screens/member/MemberFindScreen';
+import { MemberSessionsScreen } from '../screens/member/MemberSessionsScreen';
+import { MemberCalendarScreen } from '../screens/member/MemberCalendarScreen';
+import { MemberRoadmapScreen } from '../screens/member/MemberRoadmapScreen';
+import { MemberProfileScreen } from '../screens/member/MemberProfileScreen';
 
 // ─── Navigator param list ─────────────────────────────────────────────────────
 
@@ -30,15 +35,6 @@ export type MemberTabParamList = {
 };
 
 const Tab = createBottomTabNavigator<MemberTabParamList>();
-
-// ─── Screen factories ─────────────────────────────────────────────────────────
-
-const HomeScreen = (): React.JSX.Element => <PlaceholderScreen name="Member Home" />;
-const FindCHWScreen = (): React.JSX.Element => <PlaceholderScreen name="Find a CHW" />;
-const SessionsScreen = (): React.JSX.Element => <PlaceholderScreen name="My Sessions" />;
-const CalendarScreen = (): React.JSX.Element => <PlaceholderScreen name="Calendar" />;
-const RoadmapScreen = (): React.JSX.Element => <PlaceholderScreen name="My Roadmap" />;
-const ProfileScreen = (): React.JSX.Element => <PlaceholderScreen name="Profile" />;
 
 // ─── Navigator ────────────────────────────────────────────────────────────────
 
@@ -62,7 +58,7 @@ export function MemberTabNavigator(): React.JSX.Element {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={MemberHomeScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Home color={color} size={size} />
@@ -71,7 +67,7 @@ export function MemberTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="FindCHW"
-        component={FindCHWScreen}
+        component={MemberFindScreen}
         options={{
           title: 'Find CHW',
           tabBarIcon: ({ color, size }) => (
@@ -81,7 +77,7 @@ export function MemberTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Sessions"
-        component={SessionsScreen}
+        component={MemberSessionsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <ClipboardList color={color} size={size} />
@@ -90,7 +86,7 @@ export function MemberTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Calendar"
-        component={CalendarScreen}
+        component={MemberCalendarScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <CalendarDays color={color} size={size} />
@@ -99,7 +95,7 @@ export function MemberTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Roadmap"
-        component={RoadmapScreen}
+        component={MemberRoadmapScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Map color={color} size={size} />
@@ -108,7 +104,7 @@ export function MemberTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={MemberProfileScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <UserCircle color={color} size={size} />
