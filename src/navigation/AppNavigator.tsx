@@ -3,7 +3,7 @@
  *
  * Routing logic:
  *   - While auth state is loading → blank screen (prevents flash)
- *   - Unauthenticated          → AuthStack  (Login, Register, Waitlist)
+ *   - Unauthenticated          → AuthStack  (Login/Register toggle, Waitlist)
  *   - CHW role                 → CHWTabNavigator
  *   - Member role              → MemberTabNavigator
  */
@@ -15,7 +15,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
-import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { LoginScreen } from '../screens/auth/LoginScreen';
+import { WaitlistScreen } from '../screens/auth/WaitlistScreen';
 import { CHWTabNavigator } from './CHWTabNavigator';
 import { MemberTabNavigator } from './MemberTabNavigator';
 
@@ -38,19 +39,15 @@ export type RootStackParamList = {
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-// ─── Auth stack screens (placeholder until real screens are built) ────────────
-
-const LoginScreen = (): React.JSX.Element => <PlaceholderScreen name="Login" />;
-const RegisterScreen = (): React.JSX.Element => <PlaceholderScreen name="Register" />;
-const WaitlistScreen = (): React.JSX.Element => <PlaceholderScreen name="Join Waitlist" />;
-
 // ─── Auth stack ───────────────────────────────────────────────────────────────
 
 function AuthNavigator(): React.JSX.Element {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="Register" component={RegisterScreen} />
+      {/* Register is intentionally aliased to LoginScreen — sign-up is a
+          toggle on the same screen, keeping the auth flow compact. */}
+      <AuthStack.Screen name="Register" component={LoginScreen} />
       <AuthStack.Screen name="Waitlist" component={WaitlistScreen} />
     </AuthStack.Navigator>
   );
