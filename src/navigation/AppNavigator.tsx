@@ -1,0 +1,114 @@
+/**
+ * Root navigator for CompassCHW.
+ *
+ * Routing logic:
+ *   - While auth state is loading → blank screen (prevents flash)
+ *   - Unauthenticated          → AuthStack  (Login, Register, Waitlist)
+ *   - CHW role                 → CHWTabNavigator
+ *   - Member role              → MemberTabNavigator
+ */
+
+import React from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import { useAuth } from '../context/AuthContext';
+import { colors } from '../theme/colors';
+import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { CHWTabNavigator } from './CHWTabNavigator';
+import { MemberTabNavigator } from './MemberTabNavigator';
+
+// ─── Auth stack param list ────────────────────────────────────────────────────
+
+export type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  Waitlist: undefined;
+};
+
+// ─── Root stack param list ────────────────────────────────────────────────────
+
+export type RootStackParamList = {
+  Auth: undefined;
+  CHW: undefined;
+  Member: undefined;
+};
+
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+
+// ─── Auth stack screens (placeholder until real screens are built) ────────────
+
+const LoginScreen = (): React.JSX.Element => <PlaceholderScreen name="Login" />;
+const RegisterScreen = (): React.JSX.Element => <PlaceholderScreen name="Register" />;
+const WaitlistScreen = (): React.JSX.Element => <PlaceholderScreen name="Join Waitlist" />;
+
+// ─── Auth stack ───────────────────────────────────────────────────────────────
+
+function AuthNavigator(): React.JSX.Element {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="Waitlist" component={WaitlistScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+// ─── CHW root ─────────────────────────────────────────────────────────────────
+
+function CHWNavigator(): React.JSX.Element {
+  return <CHWTabNavigator />;
+}
+
+// ─── Member root ──────────────────────────────────────────────────────────────
+
+function MemberNavigator(): React.JSX.Element {
+  return <MemberTabNavigator />;
+}
+
+// ─── Loading splash ───────────────────────────────────────────────────────────
+
+function LoadingScreen(): React.JSX.Element {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+  );
+}
+
+// ─── Root navigator ───────────────────────────────────────────────────────────
+
+export function AppNavigator(): React.JSX.Element {
+  const { isLoading, isAuthenticated, userRole } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <NavigationContainer>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {!isAuthenticated ? (
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
+        ) : userRole === 'chw' ? (
+          <RootStack.Screen name="CHW" component={CHWNavigator} />
+        ) : (
+          <RootStack.Screen name="Member" component={MemberNavigator} />
+        )}
+      </RootStack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+});
