@@ -16,7 +16,12 @@ import {
 } from 'lucide-react-native';
 
 import { colors } from '../theme/colors';
-import { PlaceholderScreen } from '../screens/PlaceholderScreen';
+import { CHWDashboardScreen } from '../screens/chw/CHWDashboardScreen';
+import { CHWRequestsScreen } from '../screens/chw/CHWRequestsScreen';
+import { CHWSessionsScreen } from '../screens/chw/CHWSessionsScreen';
+import { CHWCalendarScreen } from '../screens/chw/CHWCalendarScreen';
+import { CHWEarningsScreen } from '../screens/chw/CHWEarningsScreen';
+import { CHWProfileScreen } from '../screens/chw/CHWProfileScreen';
 
 // ─── Navigator param list ─────────────────────────────────────────────────────
 
@@ -30,15 +35,6 @@ export type CHWTabParamList = {
 };
 
 const Tab = createBottomTabNavigator<CHWTabParamList>();
-
-// ─── Screen factories ─────────────────────────────────────────────────────────
-
-const DashboardScreen = (): React.JSX.Element => <PlaceholderScreen name="CHW Dashboard" />;
-const RequestsScreen = (): React.JSX.Element => <PlaceholderScreen name="Requests" />;
-const SessionsScreen = (): React.JSX.Element => <PlaceholderScreen name="Sessions" />;
-const CalendarScreen = (): React.JSX.Element => <PlaceholderScreen name="Calendar" />;
-const EarningsScreen = (): React.JSX.Element => <PlaceholderScreen name="Earnings" />;
-const ProfileScreen = (): React.JSX.Element => <PlaceholderScreen name="Profile" />;
 
 // ─── Navigator ────────────────────────────────────────────────────────────────
 
@@ -62,7 +58,7 @@ export function CHWTabNavigator(): React.JSX.Element {
     >
       <Tab.Screen
         name="Dashboard"
-        component={DashboardScreen}
+        component={CHWDashboardScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <LayoutDashboard color={color} size={size} />
@@ -71,7 +67,7 @@ export function CHWTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Requests"
-        component={RequestsScreen}
+        component={CHWRequestsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Inbox color={color} size={size} />
@@ -80,7 +76,7 @@ export function CHWTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Sessions"
-        component={SessionsScreen}
+        component={CHWSessionsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <ClipboardList color={color} size={size} />
@@ -89,7 +85,7 @@ export function CHWTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Calendar"
-        component={CalendarScreen}
+        component={CHWCalendarScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <CalendarDays color={color} size={size} />
@@ -98,7 +94,7 @@ export function CHWTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Earnings"
-        component={EarningsScreen}
+        component={CHWEarningsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <DollarSign color={color} size={size} />
@@ -107,7 +103,7 @@ export function CHWTabNavigator(): React.JSX.Element {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={CHWProfileScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <UserCircle color={color} size={size} />
