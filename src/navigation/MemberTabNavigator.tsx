@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
   Home,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react-native';
 
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/typography';
 import { MemberHomeScreen } from '../screens/member/MemberHomeScreen';
 import { MemberFindScreen } from '../screens/member/MemberFindScreen';
 import { MemberSessionsScreen } from '../screens/member/MemberSessionsScreen';
@@ -49,10 +51,21 @@ export function MemberTabNavigator(): React.JSX.Element {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
           borderTopWidth: 1,
+          height: Platform.OS === 'ios' ? 60 : undefined,
+          // iOS shadow on the tab bar
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.06,
+              shadowRadius: 12,
+            },
+            android: { elevation: 8 },
+          }),
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
+          fontSize: 12,
+          fontFamily: fonts.bodySemibold,
         },
       }}
     >
