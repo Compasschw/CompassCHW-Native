@@ -987,7 +987,7 @@ export function LandingScreen(): React.JSX.Element {
                   { flex: isDesktop ? 1 : undefined, alignItems: 'center' },
                 ]}
               >
-                <PhoneMockup />
+                <PhoneMockup availableWidth={isDesktop ? 320 : width - spacing.lg * 2} />
               </View>
             </View>
           </ContentWrapper>
@@ -1200,66 +1200,121 @@ function ServiceCardItem({
 
 /**
  * Decorative phone UI mockup used in the Mobile First section.
+ *
+ * @param availableWidth - The width of the container. The phone will be capped
+ *   at 280 px and height will be proportionally derived at a 2:1 ratio (h = w * 2).
  */
-function PhoneMockup(): React.JSX.Element {
+function PhoneMockup({ availableWidth }: { availableWidth: number }): React.JSX.Element {
+  const phoneWidth = Math.min(280, availableWidth);
+  const phoneHeight = phoneWidth * 2; // 2:1 ratio — 280 × 560
+  const bezel = Math.round(phoneWidth * 0.04); // ~11px at 280
+  const cornerRadius = 36;
+  const innerRadius = cornerRadius - bezel;
+
   return (
-    <View style={staticStyles.phoneMockupOuter}>
-      <View style={staticStyles.phoneMockupNotch} />
-      <View style={staticStyles.phoneMockupInner}>
-        {/* Status bar */}
-        <View style={staticStyles.phoneStatusBar}>
-          <Text style={staticStyles.phoneStatusTime}>9:41</Text>
-          <View style={staticStyles.phoneStatusIcons}>
-            <View style={staticStyles.phoneStatusIcon} />
-            <View style={staticStyles.phoneStatusIcon} />
-            <View style={[staticStyles.phoneStatusIcon, staticStyles.phoneStatusIconGreen]} />
-          </View>
-        </View>
+    // Shadow wrapper — separate from the clipping view so shadow renders correctly
+    <View
+      style={[
+        staticStyles.phoneShadowWrapper,
+        {
+          width: phoneWidth,
+          height: phoneHeight,
+          borderRadius: cornerRadius,
+          marginVertical: spacing.xl,
+        },
+      ]}
+    >
+      {/* Bezel + screen (overflow hidden for clip) */}
+      <View
+        style={[
+          staticStyles.phoneMockupOuter,
+          {
+            width: phoneWidth,
+            height: phoneHeight,
+            borderRadius: cornerRadius,
+            padding: bezel,
+          },
+        ]}
+      >
+        {/* Dynamic island / notch */}
+        <View
+          style={[
+            staticStyles.phoneMockupNotch,
+            { width: Math.round(phoneWidth * 0.37), marginLeft: -Math.round(phoneWidth * 0.185) },
+          ]}
+        />
 
-        {/* App header */}
-        <View style={staticStyles.phoneAppHeader}>
-          <Smartphone size={18} color={colors.primary} />
-          <Text style={staticStyles.phoneAppTitle}>Compass</Text>
-        </View>
-
-        <Text style={staticStyles.phoneWelcome}>Welcome back, Carlos</Text>
-        <Text style={staticStyles.phoneSubtitle}>You have 2 sessions today</Text>
-
-        {/* Session card */}
-        <View style={staticStyles.phoneSessionCard}>
-          <View style={staticStyles.phoneSessionCardTop}>
-            <View>
-              <Text style={staticStyles.phoneSessionTitle}>Housing Support</Text>
-              <Text style={staticStyles.phoneSessionSub}>w/ Maria G.</Text>
+        {/* Screen area fills all remaining height above the bottom nav */}
+        <View
+          style={[
+            staticStyles.phoneMockupInner,
+            {
+              borderTopLeftRadius: innerRadius,
+              borderTopRightRadius: innerRadius,
+              flex: 1,
+            },
+          ]}
+        >
+          {/* Status bar */}
+          <View style={staticStyles.phoneStatusBar}>
+            <Text style={staticStyles.phoneStatusTime}>9:41</Text>
+            <View style={staticStyles.phoneStatusIcons}>
+              <View style={staticStyles.phoneStatusIcon} />
+              <View style={staticStyles.phoneStatusIcon} />
+              <View style={[staticStyles.phoneStatusIcon, staticStyles.phoneStatusIconGreen]} />
             </View>
-            <View style={staticStyles.phoneSessionTimeBadge}>
-              <Text style={staticStyles.phoneSessionTime}>2:00 PM</Text>
+          </View>
+
+          {/* App header */}
+          <View style={staticStyles.phoneAppHeader}>
+            <Smartphone size={14} color={colors.primary} />
+            <Text style={staticStyles.phoneAppTitle}>Compass</Text>
+          </View>
+
+          <Text style={staticStyles.phoneWelcome}>Welcome back, Carlos</Text>
+          <Text style={staticStyles.phoneSubtitle}>You have 2 sessions today</Text>
+
+          {/* Session card — primary green */}
+          <View style={staticStyles.phoneSessionCard}>
+            <View style={staticStyles.phoneSessionCardTop}>
+              <View>
+                <Text style={staticStyles.phoneSessionTitle}>Housing Support</Text>
+                <Text style={staticStyles.phoneSessionSub}>w/ Maria G.</Text>
+              </View>
+              <View style={staticStyles.phoneSessionTimeBadge}>
+                <Text style={staticStyles.phoneSessionTime}>2:00 PM</Text>
+              </View>
+            </View>
+            <Text style={staticStyles.phoneSessionDesc}>Rental assistance application review</Text>
+          </View>
+
+          {/* Two stat cards side by side */}
+          <View style={staticStyles.phoneStatsRow}>
+            <View style={staticStyles.phoneStatCard}>
+              <Text style={staticStyles.phoneStatValue}>$176</Text>
+              <Text style={staticStyles.phoneStatLabel}>This Week</Text>
+            </View>
+            <View style={staticStyles.phoneStatCard}>
+              <Text style={staticStyles.phoneStatValue}>24</Text>
+              <Text style={staticStyles.phoneStatLabel}>Sessions Done</Text>
             </View>
           </View>
-          <Text style={staticStyles.phoneSessionDesc}>Rental assistance application review</Text>
         </View>
 
-        {/* Stats row */}
-        <View style={staticStyles.phoneStatsRow}>
-          <View style={staticStyles.phoneStatCard}>
-            <Text style={staticStyles.phoneStatValue}>$176</Text>
-            <Text style={staticStyles.phoneStatLabel}>This Week</Text>
-          </View>
-          <View style={staticStyles.phoneStatCard}>
-            <Text style={staticStyles.phoneStatValue}>24</Text>
-            <Text style={staticStyles.phoneStatLabel}>Sessions Done</Text>
-          </View>
+        {/* Bottom nav — inside the bezel, rounded bottom corners */}
+        <View
+          style={[
+            staticStyles.phoneBottomNav,
+            { borderBottomLeftRadius: innerRadius, borderBottomRightRadius: innerRadius },
+          ]}
+        >
+          {['Home', 'Requests', 'Sessions', 'Earnings'].map((item) => (
+            <View key={item} style={staticStyles.phoneNavItem}>
+              <View style={[staticStyles.phoneNavDot, item === 'Home' && staticStyles.phoneNavDotActive]} />
+              <Text style={staticStyles.phoneNavLabel}>{item}</Text>
+            </View>
+          ))}
         </View>
-      </View>
-
-      {/* Bottom nav */}
-      <View style={staticStyles.phoneBottomNav}>
-        {['Home', 'Requests', 'Sessions', 'Earnings'].map((item) => (
-          <View key={item} style={staticStyles.phoneNavItem}>
-            <View style={[staticStyles.phoneNavDot, item === 'Home' && staticStyles.phoneNavDotActive]} />
-            <Text style={staticStyles.phoneNavLabel}>{item}</Text>
-          </View>
-        ))}
       </View>
     </View>
   );
@@ -1874,28 +1929,29 @@ const staticStyles = StyleSheet.create({
   },
 
   // ── Phone mockup ──────────────────────────────────────────────────────────────
-  phoneMockupOuter: {
-    width: 260,
-    backgroundColor: colors.compassDark,
-    borderRadius: 44,
-    padding: 12,
-    marginVertical: spacing.xl,
+  // Shadow wrapper: renders the drop shadow without clipping it.
+  // width, height, borderRadius, marginVertical set dynamically.
+  phoneShadowWrapper: {
     ...Platform.select({
       ios: {
-        shadowColor: colors.foreground,
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.28,
+        shadowRadius: 32,
       },
-      android: { elevation: 12 },
+      android: { elevation: 16 },
     }),
+  },
+  // Bezel container: clips inner screen content. Overflow hidden required.
+  // width, height, borderRadius, padding set dynamically.
+  phoneMockupOuter: {
+    backgroundColor: colors.compassDark,
+    overflow: 'hidden',
   },
   phoneMockupNotch: {
     position: 'absolute',
     top: 0,
     left: '50%',
-    marginLeft: -52,
-    width: 104,
     height: 28,
     backgroundColor: colors.compassDark,
     borderBottomLeftRadius: 16,
@@ -1904,52 +1960,54 @@ const staticStyles = StyleSheet.create({
   },
   phoneMockupInner: {
     backgroundColor: colors.card,
-    borderRadius: 36,
-    paddingTop: 40,
+    // paddingTop: large enough to clear the notch
+    paddingTop: 36,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
     gap: spacing.sm,
+    // flex: 1 is applied inline so the inner screen fills remaining height
+    // (bottom nav is rendered outside this view, inside the outer bezel)
   },
   phoneStatusBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   phoneStatusTime: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.mutedForeground,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    color: colors.foreground,
   },
   phoneStatusIcons: {
     flexDirection: 'row',
     gap: 3,
   },
   phoneStatusIcon: {
-    width: 14,
-    height: 8,
+    width: 12,
+    height: 7,
     backgroundColor: `${colors.foreground}40`,
     borderRadius: 2,
   },
   phoneStatusIconGreen: {
-    width: 18,
+    width: 16,
     backgroundColor: colors.primary,
   },
   phoneAppHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs + 2,
-    marginBottom: spacing.xs,
+    gap: spacing.xs,
+    marginBottom: 2,
   },
   phoneAppTitle: {
     fontFamily: fonts.display,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.foreground,
     letterSpacing: -0.2,
   },
   phoneWelcome: {
     fontFamily: fonts.display,
-    fontSize: 15,
+    fontSize: 14,
     color: colors.foreground,
     letterSpacing: -0.3,
   },
@@ -1957,11 +2015,10 @@ const staticStyles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 11,
     color: colors.mutedForeground,
-    marginBottom: spacing.xs,
   },
   phoneSessionCard: {
     backgroundColor: colors.primary,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.xs,
   },
@@ -1972,12 +2029,12 @@ const staticStyles = StyleSheet.create({
   },
   phoneSessionTitle: {
     fontFamily: fonts.displaySemibold,
-    fontSize: 13,
+    fontSize: 12,
     color: '#FFFFFF',
   },
   phoneSessionSub: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 10,
     color: 'rgba(255,255,255,0.65)',
   },
   phoneSessionTimeBadge: {
@@ -1993,7 +2050,7 @@ const staticStyles = StyleSheet.create({
   },
   phoneSessionDesc: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 10,
     color: 'rgba(255,255,255,0.65)',
   },
   phoneStatsRow: {
@@ -2003,41 +2060,43 @@ const staticStyles = StyleSheet.create({
   phoneStatCard: {
     flex: 1,
     backgroundColor: colors.muted,
-    borderRadius: radii.md,
-    padding: spacing.sm + 2,
+    borderRadius: radii.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
   },
   phoneStatValue: {
     fontFamily: fonts.display,
-    fontSize: 18,
+    fontSize: 16,
     color: colors.foreground,
     letterSpacing: -0.4,
   },
   phoneStatLabel: {
     fontFamily: fonts.body,
-    fontSize: 10,
+    fontSize: 9,
     color: colors.mutedForeground,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
   phoneBottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: spacing.sm + 4,
-    paddingHorizontal: spacing.md,
-    borderTopWidth: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     backgroundColor: colors.card,
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
+    // borderBottomLeftRadius / borderBottomRightRadius set dynamically in component
   },
   phoneNavItem: {
     alignItems: 'center',
     gap: 3,
+    flex: 1,
   },
   phoneNavDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: colors.muted,
   },
   phoneNavDotActive: {
@@ -2045,8 +2104,9 @@ const staticStyles = StyleSheet.create({
   },
   phoneNavLabel: {
     fontFamily: fonts.body,
-    fontSize: 9,
+    fontSize: 8,
     color: colors.mutedForeground,
+    textAlign: 'center',
   },
 
   // ── CTA Section ───────────────────────────────────────────────────────────────

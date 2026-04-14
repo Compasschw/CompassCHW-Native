@@ -1,18 +1,25 @@
 /**
  * WaitlistScreen — join the CompassCHW waitlist.
- * Styled to match the Lovable /waitlist page.
  *
- * Layout (mobile-first, vertical stack):
- *   1. Logo wordmark
- *   2. Hero heading + subtitle
- *   3. Trust badges (3 pills: HIPAA, Medi-Cal, No Cost)
- *   4. Form card (white, gradient top bar, shadow-elevated)
- *   5. Success state with CheckCircle confirmation
+ * Layout adapts at 1024 px (isDesktop):
+ *   - Desktop: 2-column layout (left marketing copy | right form card)
+ *   - Mobile:  single column vertical stack
+ *
+ * Left column (desktop):
+ *   - Compass icon + "CompassCHW" wordmark
+ *   - Pulsing green dot + "LAUNCHING SOON IN LOS ANGELES" eyebrow
+ *   - Headline "Community health, connected." (connected. in secondary green)
+ *   - Description with bold "Community Health Workers"
+ *   - 3 trust badge pills: HIPAA Compliant, Medi-Cal Accepted, No Cost to Members
+ *
+ * Right column: form card with gradient top bar, 4 role options, success state.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +29,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,21 +37,29 @@ import { Shield, CheckCircle, Star } from 'lucide-react-native';
 
 import { submitWaitlist, type WaitlistPayload } from '../../api/waitlist';
 import { colors } from '../../theme/colors';
-import { typography, fonts } from '../../theme/typography';
+import { fonts } from '../../theme/typography';
 import { shadows } from '../../theme/shadows';
 import { radii, spacing } from '../../theme/spacing';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../../navigation/AppNavigator';
 
+// ─── Assets ───────────────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const compassIcon = require('../../../assets/compass-icon.png') as number;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Waitlist'>;
 
-type WaitlistRole = 'chw' | 'member' | '';
+type WaitlistRole = 'chw' | 'member' | 'organization' | 'other' | '';
 
 // ─── Storage key for offline fallback ────────────────────────────────────────
 
 const WAITLIST_STORAGE_KEY = 'compass_waitlist_submission';
+
+/** Viewport width at which the 2-column desktop layout activates. */
+const DESKTOP_BREAKPOINT = 1024;
 
 // ─── Trust badges ─────────────────────────────────────────────────────────────
 
@@ -68,7 +84,43 @@ interface RoleOption {
 const ROLE_OPTIONS: RoleOption[] = [
   { value: 'chw', label: 'CHW — I want to provide care' },
   { value: 'member', label: 'Member — I need support' },
+  { value: 'organization', label: 'Organization — We employ CHWs' },
+  { value: 'other', label: 'Other' },
 ];
+
+// ─── Pulsing dot ──────────────────────────────────────────────────────────────
+
+/**
+ * Animated pulsing green dot for the "Launching Soon" eyebrow badge.
+ */
+function PulsingDot({ size = 10 }: { size?: number }): React.JSX.Element {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.2, duration: 900, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: colors.secondary,
+        },
+        { opacity },
+      ]}
+    />
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -78,6 +130,9 @@ const ROLE_OPTIONS: RoleOption[] = [
  * On API failure, persists to AsyncStorage so the lead is not lost.
  */
 export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= DESKTOP_BREAKPOINT;
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -145,7 +200,7 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
     return (
       <SafeAreaView style={s.safeArea}>
         <View style={s.successFullScreen}>
-          <View style={[s.successCard, shadows.elevated]}>
+          <View style={[s.formCard, shadows.elevated, isDesktop && { maxWidth: 480 }]}>
             {/* Gradient top bar */}
             <View style={s.cardGradientBar}>
               <View style={s.cardGradientLeft} />
@@ -177,6 +232,233 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
     );
   }
 
+  // ── Shared form card ──────────────────────────────────────────────────────
+
+  const formCard = (
+    <View style={[s.formCard, shadows.elevated]}>
+      {/* Gradient top bar: primary → compassNude */}
+      <View style={s.cardGradientBar}>
+        <View style={s.cardGradientLeft} />
+        <View style={s.cardGradientRight} />
+      </View>
+
+      <View style={s.cardBody}>
+        <View style={s.cardHeader}>
+          <Text style={s.cardTitle}>Get early access</Text>
+          <Text style={s.cardSubtitle}>
+            Be the first to know when Compass launches in your area.
+            Join the waitlist — it takes 10 seconds.
+          </Text>
+        </View>
+
+        {/* Error */}
+        {error !== null && (
+          <View style={s.errorContainer}>
+            <Text style={s.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* First + Last name row */}
+        <View style={s.nameRow}>
+          <View style={[s.inputGroup, s.inputHalf]}>
+            <Text style={s.inputLabel}>First Name</Text>
+            <TextInput
+              style={s.textInput}
+              placeholder="Maria"
+              placeholderTextColor={`${colors.mutedForeground}88`}
+              value={firstName}
+              onChangeText={setFirstName}
+              autoCapitalize="words"
+              autoComplete="given-name"
+              returnKeyType="next"
+              editable={!isLoading}
+              accessibilityLabel="First name"
+            />
+          </View>
+          <View style={[s.inputGroup, s.inputHalf]}>
+            <Text style={s.inputLabel}>Last Name</Text>
+            <TextInput
+              style={s.textInput}
+              placeholder="Garcia"
+              placeholderTextColor={`${colors.mutedForeground}88`}
+              value={lastName}
+              onChangeText={setLastName}
+              autoCapitalize="words"
+              autoComplete="family-name"
+              returnKeyType="next"
+              editable={!isLoading}
+              accessibilityLabel="Last name"
+            />
+          </View>
+        </View>
+
+        {/* Email */}
+        <View style={s.inputGroup}>
+          <Text style={s.inputLabel}>Email Address</Text>
+          <TextInput
+            style={s.textInput}
+            placeholder="maria@example.com"
+            placeholderTextColor={`${colors.mutedForeground}88`}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            returnKeyType="next"
+            editable={!isLoading}
+            accessibilityLabel="Email address"
+          />
+        </View>
+
+        {/* Role — selectable rows */}
+        <View style={s.inputGroup}>
+          <Text style={s.inputLabel}>I am a…</Text>
+          <View style={s.roleSelector}>
+            {ROLE_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  s.roleOption,
+                  role === option.value && s.roleOptionSelected,
+                ]}
+                onPress={() => setRole(option.value)}
+                activeOpacity={0.7}
+                accessibilityLabel={option.label}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: role === option.value }}
+              >
+                <Text
+                  style={[
+                    s.roleOptionText,
+                    role === option.value && s.roleOptionTextSelected,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={[s.submitButton, isLoading && s.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={isLoading}
+          activeOpacity={0.85}
+          accessibilityLabel="Join the waitlist"
+          accessibilityRole="button"
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={s.submitButtonText}>Join the Waitlist →</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Footer copy */}
+        <Text style={s.footerNote}>No spam, ever. Unsubscribe anytime.</Text>
+
+        {/* Social proof */}
+        <View style={s.socialProofRow}>
+          <PulsingDot size={8} />
+          <Text style={s.socialProofText}>Join hundreds of CHWs and community members</Text>
+        </View>
+
+        {/* Already have account */}
+        <View style={s.signInRow}>
+          <Text style={s.signInText}>Already have an account?  </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Login')}
+            accessibilityRole="button"
+            accessibilityLabel="Go to sign in"
+          >
+            <Text style={s.signInLink}>Sign in</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+  // ── Desktop 2-column layout ───────────────────────────────────────────────
+
+  if (isDesktop) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <KeyboardAvoidingView
+          style={s.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
+            style={s.flex}
+            contentContainerStyle={s.desktopScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={s.desktopColumns}>
+              {/* ── Left column — marketing copy ──────────────────────────── */}
+              <View style={s.desktopLeftCol}>
+                {/* Wordmark */}
+                <View style={s.logoRow}>
+                  <Image
+                    source={compassIcon}
+                    style={s.logoImage}
+                    accessibilityIgnoresInvertColors
+                    accessibilityLabel="Compass icon"
+                  />
+                  <Text style={s.wordmark}>
+                    Compass<Text style={s.wordmarkAccent}>CHW</Text>
+                  </Text>
+                </View>
+
+                {/* Eyebrow */}
+                <View style={s.eyebrowRow}>
+                  <PulsingDot size={10} />
+                  <Text style={s.eyebrowText}>LAUNCHING SOON IN LOS ANGELES</Text>
+                </View>
+
+                {/* Headline */}
+                <Text
+                  style={[
+                    s.heroTitle,
+                    { fontSize: 64, lineHeight: 68, letterSpacing: -1.5 },
+                  ]}
+                >
+                  Community health,{' '}
+                  <Text style={s.heroTitleAccent}>connected.</Text>
+                </Text>
+
+                {/* Description */}
+                <Text style={[s.heroSubtitle, { fontSize: 18, lineHeight: 28 }]}>
+                  Compass CHW is a marketplace connecting Los Angeles residents with trusted{' '}
+                  <Text style={s.heroSubtitleBold}>Community Health Workers</Text>
+                  {' '}— neighbors trained to help with housing, recovery, food, mental health, and healthcare navigation.
+                </Text>
+
+                {/* Trust badges */}
+                <View style={s.trustBadgesRow}>
+                  {TRUST_BADGES.map(({ icon: Icon, label }) => (
+                    <View key={label} style={s.trustBadge}>
+                      <Icon size={14} color={colors.primary} />
+                      <Text style={s.trustBadgeText}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* ── Right column — form card ───────────────────────────────── */}
+              <View style={s.desktopRightCol}>
+                {formCard}
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Mobile single-column layout ───────────────────────────────────────────
+
   return (
     <SafeAreaView style={s.safeArea}>
       <KeyboardAvoidingView
@@ -189,34 +471,44 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Logo wordmark ─────────────────────────────────────────────── */}
+          {/* Logo wordmark */}
           <View style={s.logoRow}>
-            <View style={s.logoPulse} />
+            <Image
+              source={compassIcon}
+              style={s.logoImage}
+              accessibilityIgnoresInvertColors
+              accessibilityLabel="Compass icon"
+            />
             <Text style={s.wordmark}>
               Compass<Text style={s.wordmarkAccent}>CHW</Text>
             </Text>
           </View>
 
-          {/* ── Hero copy ─────────────────────────────────────────────────── */}
+          {/* Hero copy */}
           <View style={s.heroSection}>
             <View style={s.eyebrowRow}>
-              <View style={s.eyebrowDot} />
+              <PulsingDot size={8} />
               <Text style={s.eyebrowText}>LAUNCHING SOON IN LOS ANGELES</Text>
             </View>
 
-            <Text style={s.heroTitle}>
+            <Text
+              style={[
+                s.heroTitle,
+                { fontSize: 40, lineHeight: 44, letterSpacing: -1.5 },
+              ]}
+            >
               Community health,{' '}
               <Text style={s.heroTitleAccent}>connected.</Text>
             </Text>
 
-            <Text style={s.heroSubtitle}>
-              Compass CHW connects Los Angeles residents with trusted{' '}
-              <Text style={s.heroSubtitleBold}>Community Health Workers</Text> — neighbors
-              trained to help with housing, recovery, food, mental health, and healthcare navigation.
+            <Text style={[s.heroSubtitle, { fontSize: 16, lineHeight: 24 }]}>
+              Compass CHW is a marketplace connecting Los Angeles residents with trusted{' '}
+              <Text style={s.heroSubtitleBold}>Community Health Workers</Text>
+              {' '}— neighbors trained to help with housing, recovery, food, mental health, and healthcare navigation.
             </Text>
           </View>
 
-          {/* ── Trust badges ──────────────────────────────────────────────── */}
+          {/* Trust badges */}
           <View style={s.trustBadgesRow}>
             {TRUST_BADGES.map(({ icon: Icon, label }) => (
               <View key={label} style={s.trustBadge}>
@@ -226,150 +518,8 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
             ))}
           </View>
 
-          {/* ── Form card ─────────────────────────────────────────────────── */}
-          <View style={[s.card, shadows.elevated]}>
-            {/* Gradient top bar: primary → compassNude */}
-            <View style={s.cardGradientBar}>
-              <View style={s.cardGradientLeft} />
-              <View style={s.cardGradientRight} />
-            </View>
-
-            <View style={s.cardBody}>
-              <View style={s.cardHeader}>
-                <Text style={s.cardTitle}>Get early access</Text>
-                <Text style={s.cardSubtitle}>
-                  Be the first to know when Compass launches in your area.
-                  Join the waitlist — it takes 10 seconds.
-                </Text>
-              </View>
-
-              {/* Error */}
-              {error !== null && (
-                <View style={s.errorContainer}>
-                  <Text style={s.errorText}>{error}</Text>
-                </View>
-              )}
-
-              {/* First + Last name row */}
-              <View style={s.nameRow}>
-                <View style={[s.inputGroup, s.inputHalf]}>
-                  <Text style={s.inputLabel}>FIRST NAME</Text>
-                  <TextInput
-                    style={s.textInput}
-                    placeholder="Maria"
-                    placeholderTextColor={`${colors.mutedForeground}88`}
-                    value={firstName}
-                    onChangeText={setFirstName}
-                    autoCapitalize="words"
-                    autoComplete="given-name"
-                    returnKeyType="next"
-                    editable={!isLoading}
-                    accessibilityLabel="First name"
-                  />
-                </View>
-                <View style={[s.inputGroup, s.inputHalf]}>
-                  <Text style={s.inputLabel}>LAST NAME</Text>
-                  <TextInput
-                    style={s.textInput}
-                    placeholder="Garcia"
-                    placeholderTextColor={`${colors.mutedForeground}88`}
-                    value={lastName}
-                    onChangeText={setLastName}
-                    autoCapitalize="words"
-                    autoComplete="family-name"
-                    returnKeyType="next"
-                    editable={!isLoading}
-                    accessibilityLabel="Last name"
-                  />
-                </View>
-              </View>
-
-              {/* Email */}
-              <View style={s.inputGroup}>
-                <Text style={s.inputLabel}>EMAIL ADDRESS</Text>
-                <TextInput
-                  style={s.textInput}
-                  placeholder="maria@example.com"
-                  placeholderTextColor={`${colors.mutedForeground}88`}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  returnKeyType="next"
-                  editable={!isLoading}
-                  accessibilityLabel="Email address"
-                />
-              </View>
-
-              {/* Role — segmented selector */}
-              <View style={s.inputGroup}>
-                <Text style={s.inputLabel}>I AM A...</Text>
-                <View style={s.roleSelector}>
-                  {ROLE_OPTIONS.map((option) => (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        s.roleOption,
-                        role === option.value && s.roleOptionSelected,
-                      ]}
-                      onPress={() => setRole(option.value)}
-                      activeOpacity={0.7}
-                      accessibilityLabel={option.label}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: role === option.value }}
-                    >
-                      <Text
-                        style={[
-                          s.roleOptionText,
-                          role === option.value && s.roleOptionTextSelected,
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Submit */}
-              <TouchableOpacity
-                style={[s.submitButton, isLoading && s.submitButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-                activeOpacity={0.85}
-                accessibilityLabel="Join the waitlist"
-                accessibilityRole="button"
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={s.submitButtonText}>Join the Waitlist  →</Text>
-                )}
-              </TouchableOpacity>
-
-              {/* Footer copy */}
-              <Text style={s.footerNote}>No spam, ever. Unsubscribe anytime.</Text>
-
-              {/* Social proof */}
-              <View style={s.socialProofRow}>
-                <View style={s.socialProofDot} />
-                <Text style={s.socialProofText}>Join hundreds of CHWs and community members</Text>
-              </View>
-
-              {/* Already have account */}
-              <View style={s.signInRow}>
-                <Text style={s.signInText}>Already have an account?  </Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('Login')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go to sign in"
-                >
-                  <Text style={s.signInLink}>Sign in</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          {/* Form card */}
+          {formCard}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -386,6 +536,8 @@ const s = StyleSheet.create({
   flex: {
     flex: 1,
   },
+
+  // ── Mobile scroll layout ───────────────────────────────────────────────────
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
@@ -394,17 +546,39 @@ const s = StyleSheet.create({
     gap: spacing.xl,
   },
 
+  // ── Desktop scroll layout ──────────────────────────────────────────────────
+  desktopScrollContent: {
+    flexGrow: 1,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  desktopColumns: {
+    flexDirection: 'row',
+    gap: 64,
+    width: '100%',
+    maxWidth: 1184,
+    alignItems: 'center',
+  },
+  desktopLeftCol: {
+    flex: 1,
+    gap: spacing.xl,
+  },
+  desktopRightCol: {
+    width: 440,
+  },
+
   // ── Logo ──────────────────────────────────────────────────────────────────
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  logoPulse: {
-    width: 10,
-    height: 10,
-    borderRadius: radii.full,
-    backgroundColor: colors.secondary,
+  logoImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
   },
   wordmark: {
     fontFamily: fonts.display,
@@ -416,7 +590,7 @@ const s = StyleSheet.create({
     color: colors.secondary,
   },
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
+  // ── Hero copy ─────────────────────────────────────────────────────────────
   heroSection: {
     gap: spacing.md,
   },
@@ -424,12 +598,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  eyebrowDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.secondary,
   },
   eyebrowText: {
     fontFamily: fonts.bodySemibold,
@@ -439,9 +607,6 @@ const s = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: fonts.display,
-    fontSize: 32,
-    lineHeight: 38,
-    letterSpacing: -0.8,
     color: colors.foreground,
   },
   heroTitleAccent: {
@@ -449,12 +614,10 @@ const s = StyleSheet.create({
   },
   heroSubtitle: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
     color: colors.mutedForeground,
   },
   heroSubtitleBold: {
-    fontFamily: fonts.bodySemibold,
+    fontFamily: fonts.bodyBold,
     color: colors.foreground,
   },
 
@@ -471,9 +634,9 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: radii.full,
-    backgroundColor: `${colors.primary}10`,
+    backgroundColor: `${colors.primary}1A`,
     borderWidth: 1,
-    borderColor: `${colors.primary}20`,
+    borderColor: `${colors.primary}33`,
   },
   trustBadgeText: {
     fontFamily: fonts.bodySemibold,
@@ -482,8 +645,8 @@ const s = StyleSheet.create({
     color: colors.primary,
   },
 
-  // ── Card shared ───────────────────────────────────────────────────────────
-  card: {
+  // ── Form card ─────────────────────────────────────────────────────────────
+  formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: radii.xl,
     borderWidth: 1,
@@ -511,9 +674,10 @@ const s = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   cardTitle: {
-    fontFamily: fonts.displaySemibold,
-    fontSize: 22,
+    fontFamily: fonts.display,
+    fontSize: 24,
     color: colors.foreground,
+    letterSpacing: -0.3,
   },
   cardSubtitle: {
     fontFamily: fonts.body,
@@ -548,15 +712,16 @@ const s = StyleSheet.create({
   },
   inputLabel: {
     fontFamily: fonts.bodySemibold,
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: 12,
+    letterSpacing: 0.2,
     color: colors.mutedForeground,
+    marginBottom: 2,
   },
   textInput: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: `${colors.muted}4D`,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
     fontFamily: fonts.body,
@@ -572,7 +737,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: `${colors.muted}4D`,
     paddingVertical: 14,
     paddingHorizontal: spacing.md,
   },
@@ -604,7 +769,7 @@ const s = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.bodyBold,
     fontSize: 16,
     color: '#FFFFFF',
   },
@@ -622,12 +787,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-  },
-  socialProofDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radii.full,
-    backgroundColor: colors.secondary,
   },
   socialProofText: {
     fontFamily: fonts.body,
@@ -657,14 +816,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  successCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
   successCardBody: {
     padding: spacing.xl,
     alignItems: 'center',
@@ -680,7 +831,7 @@ const s = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   successTitle: {
-    fontFamily: fonts.displaySemibold,
+    fontFamily: fonts.display,
     fontSize: 24,
     color: colors.foreground,
     textAlign: 'center',
