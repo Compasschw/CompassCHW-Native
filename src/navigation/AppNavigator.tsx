@@ -15,6 +15,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { LandingScreen } from '../screens/LandingScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { WaitlistScreen } from '../screens/auth/WaitlistScreen';
 import { CHWOnboardingScreen } from '../screens/onboarding/CHWOnboardingScreen';
@@ -25,6 +26,7 @@ import { MemberTabNavigator } from './MemberTabNavigator';
 // ─── Auth stack param list ────────────────────────────────────────────────────
 
 export type AuthStackParamList = {
+  Landing: undefined;
   Login: undefined;
   Register: undefined;
   Waitlist: undefined;
@@ -48,6 +50,9 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 function AuthNavigator(): React.JSX.Element {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      {/* Landing is the initial route — unauthenticated users see the
+          marketing page first before proceeding to Login/Register. */}
+      <AuthStack.Screen name="Landing" component={LandingScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       {/* Register is intentionally aliased to LoginScreen — sign-up is a
           toggle on the same screen, keeping the auth flow compact. */}
