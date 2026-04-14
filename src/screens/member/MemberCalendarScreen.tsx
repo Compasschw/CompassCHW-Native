@@ -272,7 +272,7 @@ const dayCellStyles = StyleSheet.create({
     minHeight: 44,
   },
   cellSelected: {
-    backgroundColor: `${colors.primary}10`,
+    backgroundColor: '#3D5A3E15',
   },
   dateCircle: {
     width: 28,
@@ -282,20 +282,20 @@ const dayCellStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   dateCircleToday: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#3D5A3E',
   },
   dateText: {
+    fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: 12,
-    fontWeight: '500',
-    color: colors.foreground,
+    color: '#1E3320',
   },
   dateTextToday: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontFamily: 'DMSans_700Bold',
   },
   dateTextSelected: {
-    color: colors.primary,
-    fontWeight: '700',
+    color: '#3D5A3E',
+    fontFamily: 'DMSans_700Bold',
   },
   dotsRow: {
     flexDirection: 'row',
@@ -368,22 +368,22 @@ function EventDetailCard({ event }: EventDetailCardProps): React.JSX.Element {
 
 const eventCardStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     flexDirection: 'row',
     overflow: 'hidden',
     marginBottom: 10,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 6,
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
       },
       android: {
-        elevation: 2,
+        elevation: 3,
       },
     }),
   },
@@ -402,19 +402,19 @@ const eventCardStyles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 13,
+    color: '#1E3320',
     flex: 1,
   },
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: 100,
   },
   badgeText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 10,
-    fontWeight: '600',
   },
   metaRow: {
     flexDirection: 'row',
@@ -422,8 +422,9 @@ const eventCardStyles = StyleSheet.create({
     gap: 5,
   },
   metaText: {
+    fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: 11,
-    color: colors.mutedForeground,
+    color: '#6B7280',
   },
 });
 
@@ -595,7 +596,7 @@ export function MemberCalendarScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
   },
   scroll: {
     flex: 1,
@@ -608,29 +609,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pageTitle: {
-    ...typography.displaySm,
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 24,
+    color: '#1E3320',
   },
   pageSub: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#6B7280',
     marginTop: 4,
   },
 
   // Calendar card
   calendarCard: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 12,
     marginBottom: 16,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 10,
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
       },
       android: {
         elevation: 3,
@@ -648,14 +651,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthTitle: {
-    ...typography.bodySm,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 14,
+    color: '#1E3320',
   },
   dayLabelRow: {
     flexDirection: 'row',
@@ -663,9 +666,9 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     flex: 1,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 10,
-    fontWeight: '600',
-    color: colors.mutedForeground,
+    color: '#6B7280',
     textTransform: 'uppercase',
     textAlign: 'center',
     paddingVertical: 4,
@@ -686,37 +689,49 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionLabel: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    color: '#6B7280',
     letterSpacing: 1,
     marginBottom: 10,
   },
   noEventsCard: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 24,
     alignItems: 'center',
     gap: 8,
   },
   noEventsText: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 13,
+    color: '#6B7280',
   },
 
   // Legend
   legendCard: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
+    borderColor: '#DDD6CC',
+    padding: 16,
     marginBottom: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+      },
+      android: { elevation: 3 },
+    }),
   },
   legendTitle: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    color: '#6B7280',
     letterSpacing: 1,
     marginBottom: 12,
   },
@@ -737,7 +752,8 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   legendLabel: {
+    fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: 12,
-    color: colors.mutedForeground,
+    color: '#6B7280',
   },
 });

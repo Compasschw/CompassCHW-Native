@@ -174,12 +174,16 @@ const infoStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#E5DFD6',
+    marginBottom: 8,
   },
   iconCircle: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: colors.primary + '18',
+    backgroundColor: '#3D5A3E15',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -188,14 +192,17 @@ const infoStyles = StyleSheet.create({
     flex: 1,
   },
   label: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: '#6B7A6B',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   value: {
-    ...typography.bodyMd,
-    color: colors.foreground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#1E3320',
     marginTop: 1,
   },
 });
@@ -249,29 +256,34 @@ const editFieldStyles = StyleSheet.create({
     marginBottom: 12,
   },
   label: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: '#6B7A6B',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.card,
-    ...typography.bodyMd,
-    color: colors.foreground,
+    backgroundColor: '#FFFFFF',
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#1E3320',
   },
   inputMultiline: {
     minHeight: 100,
     textAlignVertical: 'top',
   },
   charCount: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: '#6B7A6B',
     textAlign: 'right',
     marginTop: 4,
   },
@@ -428,24 +440,26 @@ export function CHWProfileScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Avatar + name header ── */}
-        <View style={styles.avatarSection}>
-          <TouchableOpacity
-            onPress={isEditing ? handleAvatarPress : undefined}
-            style={styles.avatarWrapper}
-            accessibilityRole={isEditing ? 'button' : 'image'}
-            accessibilityLabel={isEditing ? 'Change avatar photo' : 'Profile avatar'}
-            disabled={!isEditing}
-          >
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitials}>{profile.avatar}</Text>
-            </View>
-            {isEditing ? (
-              <View style={styles.cameraOverlay}>
-                <Camera size={16} color="#FFFFFF" />
+        {/* ── Banner + Avatar header ── */}
+        <View style={styles.bannerContainer}>
+          <View style={styles.banner} />
+          <View style={styles.avatarSection}>
+            <TouchableOpacity
+              onPress={isEditing ? handleAvatarPress : undefined}
+              style={styles.avatarWrapper}
+              accessibilityRole={isEditing ? 'button' : 'image'}
+              accessibilityLabel={isEditing ? 'Change avatar photo' : 'Profile avatar'}
+              disabled={!isEditing}
+            >
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitials}>{profile.avatar}</Text>
               </View>
-            ) : null}
-          </TouchableOpacity>
+              {isEditing ? (
+                <View style={styles.cameraOverlay}>
+                  <Camera size={16} color="#FFFFFF" />
+                </View>
+              ) : null}
+            </TouchableOpacity>
 
           {isEditing ? (
             <View style={styles.nameEditRow}>
@@ -482,6 +496,7 @@ export function CHWProfileScreen(): React.JSX.Element {
             <View style={styles.statPill}>
               <Text style={styles.statPillText}>{profile.totalSessions} sessions</Text>
             </View>
+          </View>
           </View>
         </View>
 
@@ -756,7 +771,7 @@ export function CHWProfileScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
   },
   header: {
     flexDirection: 'row',
@@ -764,14 +779,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#DDD6CC',
   },
   headerTitle: {
-    ...typography.bodyLg,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1E3320',
   },
   headerActions: {
     flexDirection: 'row',
@@ -830,12 +846,20 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 48,
   },
+  bannerContainer: {
+    marginBottom: 24,
+  },
+  banner: {
+    height: 80,
+    backgroundColor: '#3D5A3E',
+    width: '100%',
+  },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 8,
+    paddingHorizontal: 20,
   },
   avatarWrapper: {
+    marginTop: -40,
     marginBottom: 12,
     position: 'relative',
   },
@@ -843,14 +867,22 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.primary,
+    backgroundColor: '#3D5A3E',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    shadowColor: '#3D5A3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   avatarInitials: {
-    ...typography.displaySm,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
     color: '#FFFFFF',
-    fontWeight: '700',
   },
   cameraOverlay: {
     position: 'absolute',
@@ -884,8 +916,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   profileName: {
-    ...typography.displaySm,
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: '#1E3320',
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -894,6 +928,7 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: 'wrap',
     justifyContent: 'center',
+    marginBottom: 16,
   },
   statPill: {
     flexDirection: 'row',
@@ -902,40 +937,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 100,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
   },
   statPillText: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: '#6B7A6B',
   },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     marginBottom: 16,
+    shadowColor: '#3D5A3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 3,
   },
   sectionTitle: {
-    ...typography.bodyLg,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1E3320',
     marginBottom: 12,
   },
   toggleHint: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: '#6B7A6B',
     marginBottom: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: '#DDD6CC',
   },
   bioText: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#6B7A6B',
     lineHeight: 22,
   },
   pillRow: {
@@ -1018,27 +1064,34 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   toggleCard: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     marginBottom: 16,
+    shadowColor: '#3D5A3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 3,
   },
   toggleInfo: {
     flex: 1,
   },
   toggleTitle: {
-    ...typography.bodyMd,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1E3320',
   },
   toggleSubtext: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#6B7A6B',
     marginTop: 2,
   },
   signOutButton: {
@@ -1046,15 +1099,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.destructive + '40',
+    borderColor: '#DC262640',
     paddingVertical: 16,
   },
   signOutText: {
-    ...typography.bodyMd,
-    fontWeight: '700',
-    color: colors.destructive,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 16,
+    color: '#DC2626',
   },
 });

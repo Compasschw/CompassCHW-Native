@@ -401,23 +401,17 @@ function ActiveSessionCard({
 
 const activeCardStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    shadowColor: '#3D5A3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 3,
   },
   topRow: {
     flexDirection: 'row',
@@ -506,13 +500,13 @@ const activeCardStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: colors.secondary,
-    borderRadius: 10,
-    paddingVertical: 10,
+    backgroundColor: '#7A9F5A',
+    borderRadius: 12,
+    paddingVertical: 12,
   },
   messageBtnText: {
-    ...typography.label,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
     color: '#FFFFFF',
   },
   cancelBtn: {
@@ -521,15 +515,16 @@ const activeCardStyles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    borderColor: '#DDD6CC',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
   },
   cancelBtnText: {
-    ...typography.label,
-    fontWeight: '600',
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#6B7A6B',
   },
 });
 
@@ -640,23 +635,17 @@ function CompletedSessionCard({
 
 const completedCardStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    shadowColor: '#3D5A3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 3,
   },
   topRow: {
     flexDirection: 'row',
@@ -769,16 +758,17 @@ const completedCardStyles = StyleSheet.create({
     lineHeight: 18,
   },
   bookAgainBtn: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: 10,
-    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#3D5A3E',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   bookAgainText: {
-    ...typography.label,
-    fontWeight: '700',
-    color: colors.primary,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#3D5A3E',
   },
 });
 
@@ -963,7 +953,7 @@ export function MemberSessionsScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
   },
   header: {
     paddingHorizontal: 16,
@@ -971,12 +961,16 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   title: {
-    ...typography.displaySm,
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: '#1E3320',
   },
   subtitle: {
-    ...typography.bodyMd,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#6B7A6B',
     marginTop: 4,
   },
   tabBar: {
@@ -992,19 +986,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: '#DDD6CC',
+    backgroundColor: '#FFFFFF',
   },
   tabActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: '#3D5A3E',
+    borderColor: '#3D5A3E',
   },
   tabText: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#6B7A6B',
   },
   tabTextActive: {
     color: '#FFFFFF',
@@ -1014,7 +1009,7 @@ const styles = StyleSheet.create({
     height: 20,
     paddingHorizontal: 5,
     borderRadius: 10,
-    backgroundColor: `${colors.mutedForeground}20`,
+    backgroundColor: '#6B7A6B20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1022,9 +1017,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
   tabBadgeText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.mutedForeground,
+    color: '#6B7A6B',
   },
   tabBadgeTextActive: {
     color: '#FFFFFF',
@@ -1042,13 +1037,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyTitle: {
-    ...typography.bodyMd,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1E3320',
   },
   emptySub: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#6B7A6B',
     textAlign: 'center',
   },
 });

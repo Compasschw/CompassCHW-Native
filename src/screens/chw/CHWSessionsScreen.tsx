@@ -430,12 +430,17 @@ function SessionCard({
 
 const cardStyles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#3D5A3E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 3,
   },
   headerRow: {
     flexDirection: 'row',
@@ -450,6 +455,7 @@ const cardStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    backgroundColor: '#3D5A3E15',
   },
   headerInfo: {
     flex: 1,
@@ -462,23 +468,26 @@ const cardStyles = StyleSheet.create({
     gap: 6,
   },
   memberName: {
-    ...typography.bodyMd,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1E3320',
   },
   badge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 100,
   },
   badgeText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 12,
-    fontWeight: '600',
     lineHeight: 16,
   },
   meta: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 12,
+    letterSpacing: 1,
+    color: '#6B7A6B',
   },
   statsRow: {
     flexDirection: 'row',
@@ -513,16 +522,16 @@ const cardStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: colors.primary,
-    paddingVertical: 11,
+    backgroundColor: '#3D5A3E',
+    paddingVertical: 14,
     borderRadius: 12,
   },
   startButtonDisabled: {
     opacity: 0.4,
   },
   startButtonText: {
-    ...typography.bodySm,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
     color: '#FFFFFF',
   },
   completeButton: {
@@ -531,16 +540,16 @@ const cardStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    paddingVertical: 11,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#3D5A3E',
+    paddingVertical: 14,
     borderRadius: 12,
   },
   completeButtonText: {
-    ...typography.bodySm,
-    fontWeight: '700',
-    color: colors.primary,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#3D5A3E',
   },
   chatButton: {
     flex: 1,
@@ -548,16 +557,16 @@ const cardStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.secondary,
-    paddingVertical: 11,
+    borderColor: '#7A9F5A',
+    paddingVertical: 14,
     borderRadius: 12,
   },
   chatButtonText: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.secondary,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#7A9F5A',
   },
   documentButton: {
     flex: 1,
@@ -565,16 +574,16 @@ const cardStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: colors.primary + '12',
+    backgroundColor: '#3D5A3E15',
     borderWidth: 1,
-    borderColor: colors.primary,
-    paddingVertical: 11,
+    borderColor: '#3D5A3E',
+    paddingVertical: 14,
     borderRadius: 12,
   },
   documentButtonText: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.primary,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#3D5A3E',
   },
 });
 
@@ -596,7 +605,7 @@ function ChatModal({ visible, sessionId, onClose }: ChatModalProps): React.JSX.E
       accessible
       accessibilityViewIsModal
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F1ED' }} edges={['top']}>
         {/* Modal header */}
         <View style={chatModalStyles.header}>
           <Text style={chatModalStyles.headerTitle}>Session Chat</Text>
@@ -623,22 +632,24 @@ const chatModalStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
+    borderBottomColor: '#DDD6CC',
+    backgroundColor: '#FFFFFF',
   },
   headerTitle: {
-    ...typography.displaySm,
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: '#1E3320',
   },
   closeButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
   },
 });
 
@@ -828,25 +839,27 @@ export function CHWSessionsScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
   },
   headerBlock: {
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 4,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
   },
   pageTitle: {
-    ...typography.displaySm,
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: '#1E3320',
     marginBottom: 16,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 4,
     marginBottom: 12,
   },
@@ -858,12 +871,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabItemActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#3D5A3E',
   },
   tabLabel: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#6B7A6B',
   },
   tabLabelActive: {
     color: '#FFFFFF',
@@ -884,18 +897,20 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primary + '18',
+    backgroundColor: '#3D5A3E15',
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyTitle: {
-    ...typography.bodyMd,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#1E3320',
   },
   emptySubtext: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#6B7A6B',
     textAlign: 'center',
     maxWidth: 280,
   },

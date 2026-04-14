@@ -187,28 +187,33 @@ const infoRowStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    backgroundColor: '#E5DFD6',
+    borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
   iconBox: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: `${colors.primary}12`,
+    backgroundColor: '#3D5A3E15',
     alignItems: 'center',
     justifyContent: 'center',
   },
   textBox: { flex: 1 },
   label: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 10,
+    color: '#6B7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginBottom: 1,
   },
   value: {
-    ...typography.bodyMd,
-    color: colors.foreground,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#1E3320',
   },
 });
 
@@ -246,21 +251,23 @@ function EditField({
 const editFieldStyles = StyleSheet.create({
   container: { marginBottom: 12 },
   label: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 10,
+    color: '#6B7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.card,
-    ...typography.bodyMd,
-    color: colors.foreground,
+    backgroundColor: '#FFFFFF',
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#1E3320',
   },
 });
 
@@ -280,25 +287,26 @@ function SectionCard({ title, children }: SectionCardProps): React.JSX.Element {
 
 const sectionCardStyles = StyleSheet.create({
   container: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     marginBottom: 16,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
       },
-      android: { elevation: 2 },
+      android: { elevation: 3 },
     }),
   },
   title: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 1,
     paddingHorizontal: 16,
@@ -351,13 +359,14 @@ const notifRowStyles = StyleSheet.create({
   },
   textBox: { flex: 1 },
   label: {
-    ...typography.bodyMd,
-    fontWeight: '500',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 14,
+    color: '#1E3320',
   },
   desc: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 12,
+    color: '#6B7280',
     marginTop: 1,
   },
 });
@@ -402,7 +411,7 @@ const rewardRowStyles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: `${colors.compassGold}15`,
+    backgroundColor: '#D4A35415',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -414,17 +423,18 @@ const rewardRowStyles = StyleSheet.create({
     gap: 2,
   },
   description: {
-    ...typography.bodySm,
-    color: colors.foreground,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
+    color: '#1E3320',
   },
   date: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 11,
+    color: '#6B7280',
   },
   points: {
-    ...typography.bodyMd,
-    fontWeight: '700',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 14,
   },
 });
 
@@ -474,15 +484,24 @@ function RedemptionCard({ item, onRedeem, balance }: RedemptionCardProps): React
 
 const redemptionCardStyles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+      },
+      android: { elevation: 3 },
+    }),
   },
   emoji: {
     fontSize: 28,
@@ -494,36 +513,38 @@ const redemptionCardStyles = StyleSheet.create({
     gap: 2,
   },
   name: {
-    ...typography.bodyMd,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 14,
+    color: '#1E3320',
   },
   description: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 12,
+    color: '#6B7280',
     lineHeight: 18,
   },
   cost: {
-    ...typography.label,
-    color: colors.compassGold,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 11,
+    color: '#D4A354',
     marginTop: 2,
   },
   redeemBtn: {
-    backgroundColor: colors.compassGold,
+    backgroundColor: '#D4A354',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
   },
   redeemBtnDisabled: {
-    backgroundColor: colors.border,
+    backgroundColor: '#DDD6CC',
   },
   redeemBtnText: {
-    ...typography.label,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 11,
     color: '#FFFFFF',
   },
   redeemBtnTextDisabled: {
-    color: colors.mutedForeground,
+    color: '#6B7280',
   },
 });
 
@@ -680,11 +701,15 @@ export function MemberProfileScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Avatar + name */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+        {/* Banner + Avatar + name */}
+        <View style={styles.bannerContainer}>
+          <View style={styles.banner} />
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarWrapper}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            </View>
           {isEditing ? (
             <View style={styles.nameEditRow}>
               <TextInput
@@ -709,6 +734,7 @@ export function MemberProfileScreen(): React.JSX.Element {
           )}
           <View style={styles.memberBadge}>
             <Text style={styles.memberBadgeText}>Member</Text>
+          </View>
           </View>
         </View>
 
@@ -1059,7 +1085,7 @@ export function MemberProfileScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
   },
 
   // Header
@@ -1069,14 +1095,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.background,
+    backgroundColor: '#F4F1ED',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#DDD6CC',
   },
   headerTitle: {
-    ...typography.bodyLg,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 18,
+    color: '#1E3320',
   },
   headerActions: {
     flexDirection: 'row',
@@ -1090,13 +1116,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
-    backgroundColor: colors.primary + '10',
+    borderColor: '#3D5A3E40',
+    backgroundColor: '#3D5A3E10',
   },
   headerEditText: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.primary,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
+    color: '#3D5A3E',
   },
   headerSaveBtn: {
     flexDirection: 'row',
@@ -1105,11 +1131,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: colors.primary,
+    backgroundColor: '#3D5A3E',
   },
   headerSaveText: {
-    ...typography.bodySm,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
     color: '#FFFFFF',
   },
   headerCancelBtn: {
@@ -1120,41 +1146,63 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    borderColor: '#DDD6CC',
+    backgroundColor: '#FFFFFF',
   },
   headerCancelText: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
+    color: '#6B7280',
   },
 
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingTop: 0,
   },
 
-  // Avatar
+  // Banner + Avatar
+  bannerContainer: {
+    marginHorizontal: -16,
+    marginBottom: 0,
+  },
+  banner: {
+    height: 80,
+    backgroundColor: '#3D5A3E',
+  },
   avatarSection: {
     alignItems: 'center',
     marginBottom: 20,
+    paddingHorizontal: 16,
     gap: 8,
+  },
+  avatarWrapper: {
+    marginTop: -40,
+    marginBottom: 4,
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: `${colors.primary}18`,
+    backgroundColor: '#3D5A3E18',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: `${colors.primary}30`,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 12,
+      },
+      android: { elevation: 4 },
+    }),
   },
   avatarText: {
-    ...typography.displaySm,
-    color: colors.primary,
-    fontWeight: '700',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 24,
+    color: '#3D5A3E',
   },
   nameEditRow: {
     flexDirection: 'row',
@@ -1163,40 +1211,41 @@ const styles = StyleSheet.create({
   },
   nameInput: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.card,
-    ...typography.bodyMd,
-    color: colors.foreground,
+    backgroundColor: '#FFFFFF',
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 14,
+    color: '#1E3320',
     textAlign: 'center',
   },
   displayName: {
-    ...typography.displaySm,
-    color: colors.foreground,
-    fontWeight: '700',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 20,
+    color: '#1E3320',
   },
   memberBadge: {
-    backgroundColor: `${colors.secondary}20`,
+    backgroundColor: '#7A9F5A20',
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 100,
   },
   memberBadgeText: {
-    ...typography.label,
-    color: colors.secondary,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 11,
+    color: '#7A9F5A',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
 
   // Rewards summary card
   rewardsCard: {
-    backgroundColor: `${colors.compassGold}15`,
+    backgroundColor: '#D4A35415',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: `${colors.compassGold}30`,
+    borderColor: '#D4A35430',
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1206,47 +1255,58 @@ const styles = StyleSheet.create({
   rewardsIconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: `${colors.compassGold}20`,
+    borderRadius: 12,
+    backgroundColor: '#D4A35420',
     alignItems: 'center',
     justifyContent: 'center',
   },
   rewardsInfo: { flex: 1 },
   rewardsLabel: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 10,
+    color: '#6B7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   rewardsValue: {
-    ...typography.bodyMd,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    color: '#1E3320',
   },
   rewardsBadge: {
-    backgroundColor: colors.secondary,
+    backgroundColor: '#7A9F5A',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
   },
   rewardsBadgeText: {
-    ...typography.label,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 11,
     color: '#FFFFFF',
   },
 
   // Inline edit card
   editCard: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+      },
+      android: { elevation: 3 },
+    }),
   },
   editCardTitle: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 14,
@@ -1254,7 +1314,7 @@ const styles = StyleSheet.create({
 
   divider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: '#DDD6CC',
   },
 
   // Pill toggles
@@ -1271,8 +1331,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pillText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
     lineHeight: 18,
   },
 
@@ -1281,14 +1341,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   prefLabel: {
-    ...typography.bodyMd,
-    fontWeight: '600',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 14,
+    color: '#1E3320',
     marginBottom: 4,
   },
   prefHint: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 11,
+    color: '#6B7280',
     marginBottom: 4,
   },
   segmentRow: {
@@ -1302,32 +1363,41 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
+    borderColor: '#DDD6CC',
+    backgroundColor: '#F4F1ED',
     alignItems: 'center',
     minWidth: 80,
   },
   segmentBtnActive: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary,
+    backgroundColor: '#3D5A3E20',
+    borderColor: '#3D5A3E',
   },
   segmentBtnText: {
-    ...typography.bodySm,
-    fontWeight: '600',
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
+    color: '#6B7280',
   },
   segmentBtnTextActive: {
-    color: colors.primary,
+    color: '#3D5A3E',
   },
 
   // Rewards history
   rewardsHistoryCard: {
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#DDD6CC',
     padding: 16,
     marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#3D5A3E',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+      },
+      android: { elevation: 3 },
+    }),
   },
   rewardsHistoryHeader: {
     flexDirection: 'row',
@@ -1336,9 +1406,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rewardsHistoryTitle: {
-    ...typography.bodyLg,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    color: '#1E3320',
   },
 
   // Redemption catalog
@@ -1352,18 +1422,19 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   catalogTitle: {
-    ...typography.bodyLg,
-    fontWeight: '700',
-    color: colors.foreground,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    color: '#1E3320',
   },
   catalogBalance: {
-    ...typography.bodySm,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 13,
+    color: '#6B7280',
     marginBottom: 12,
   },
   catalogBalanceBold: {
-    fontWeight: '700',
-    color: colors.compassGold,
+    fontFamily: 'DMSans_700Bold',
+    color: '#D4A354',
   },
 
   // Sign out
@@ -1374,14 +1445,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   signOutText: {
-    ...typography.bodyMd,
-    fontWeight: '600',
-    color: colors.destructive,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 14,
+    color: '#DC2626',
   },
 
   versionText: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 11,
+    color: '#6B7280',
     textAlign: 'center',
     marginBottom: 8,
   },
