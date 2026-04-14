@@ -27,6 +27,8 @@ import {
   Brain,
   RefreshCw,
   Stethoscope,
+  Bell,
+  ThumbsDown,
 } from 'lucide-react-native';
 
 import { colors } from '../../theme/colors';
@@ -323,13 +325,20 @@ const cardStyles = StyleSheet.create({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 /**
- * CHW Requests screen — displays open service requests with filter tabs.
+ * CHW Requests screen — displays open service requests with filter tabs
+ * and a summary stat row showing new / accepted / passed counts.
  */
 export function CHWRequestsScreen(): React.JSX.Element {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
-  // Dismissed IDs for optimistic accept/pass
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  // Track accepted vs passed IDs separately for summary stats
+  const [acceptedIds, setAcceptedIds] = useState<Set<string>>(new Set());
+  const [passedIds, setPassedIds] = useState<Set<string>>(new Set());
+
+  const dismissedIds = useMemo(
+    () => new Set([...acceptedIds, ...passedIds]),
+    [acceptedIds, passedIds],
+  );
 
   const allOpenRequests = useMemo<ServiceRequest[]>(
     () => serviceRequests.filter((r) => r.status === 'open' && !dismissedIds.has(r.id)),
@@ -345,11 +354,11 @@ export function CHWRequestsScreen(): React.JSX.Element {
   );
 
   const handleAccept = useCallback((id: string) => {
-    setDismissedIds((prev) => new Set([...prev, id]));
+    setAcceptedIds((prev) => new Set([...prev, id]));
   }, []);
 
   const handlePass = useCallback((id: string) => {
-    setDismissedIds((prev) => new Set([...prev, id]));
+    setPassedIds((prev) => new Set([...prev, id]));
   }, []);
 
   const tabCount = useCallback(
@@ -371,6 +380,31 @@ export function CHWRequestsScreen(): React.JSX.Element {
               <Text style={styles.countBadgeText}>{allOpenRequests.length}</Text>
             </View>
           ) : null}
+        </View>
+
+        {/* ── Summary stat row ── */}
+        <View style={styles.statSummaryRow}>
+          <View style={[styles.statSummaryCard, { borderColor: colors.compassGold + '50' }]}>
+            <View style={[styles.statSummaryIcon, { backgroundColor: colors.compassGold + '18' }]}>
+              <Bell size={14} color={colors.compassGold} />
+            </View>
+            <Text style={styles.statSummaryValue}>{allOpenRequests.length}</Text>
+            <Text style={styles.statSummaryLabel}>New</Text>
+          </View>
+          <View style={[styles.statSummaryCard, { borderColor: colors.secondary + '50' }]}>
+            <View style={[styles.statSummaryIcon, { backgroundColor: colors.secondary + '18' }]}>
+              <CheckCircle size={14} color={colors.secondary} />
+            </View>
+            <Text style={styles.statSummaryValue}>{acceptedIds.size}</Text>
+            <Text style={styles.statSummaryLabel}>Accepted</Text>
+          </View>
+          <View style={[styles.statSummaryCard, { borderColor: colors.destructive + '40' }]}>
+            <View style={[styles.statSummaryIcon, { backgroundColor: colors.destructive + '18' }]}>
+              <ThumbsDown size={14} color={colors.destructive} />
+            </View>
+            <Text style={styles.statSummaryValue}>{passedIds.size}</Text>
+            <Text style={styles.statSummaryLabel}>Passed</Text>
+          </View>
         </View>
 
         {/* Filter tabs */}
@@ -469,6 +503,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  // Summary stat row
+  statSummaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  statSummaryCard: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statSummaryIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statSummaryValue: {
+    ...typography.displaySm,
+    fontSize: 20,
+    color: colors.foreground,
+    lineHeight: 24,
+  },
+  statSummaryLabel: {
+    ...typography.label,
+    color: colors.mutedForeground,
+    textTransform: 'uppercase',
+  },
+
   tabsRow: {
     flexDirection: 'row',
     gap: 8,

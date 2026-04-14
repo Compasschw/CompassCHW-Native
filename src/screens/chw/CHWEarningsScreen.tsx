@@ -26,6 +26,7 @@ import {
   Utensils,
   Brain,
   Stethoscope,
+  TableProperties,
 } from 'lucide-react-native';
 
 import { colors } from '../../theme/colors';
@@ -34,10 +35,31 @@ import {
   earningsSummary,
   sessions,
   formatCurrency,
+  MEDI_CAL_RATE,
   sessionModeLabels,
   type Session,
   type Vertical,
 } from '../../data/mock';
+
+// ─── Earnings scenario constants ─────────────────────────────────────────────
+
+/** Phase 1 net payout rate (72% of gross billing). */
+const PHASE_1_RATE = 0.72;
+
+/** Phase 2 net payout rate (82.6% of gross billing). */
+const PHASE_2_RATE = 0.826;
+
+interface EarningsScenario {
+  label: string;
+  unitsPerDay: number;
+}
+
+const EARNINGS_SCENARIOS: EarningsScenario[] = [
+  { label: 'Light', unitsPerDay: 2 },
+  { label: 'Moderate', unitsPerDay: 8 },
+  { label: 'Full', unitsPerDay: 18 },
+  { label: 'Max Daily', unitsPerDay: 20 },
+];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -269,6 +291,86 @@ export function CHWEarningsScreen(): React.JSX.Element {
           )}
         </View>
 
+        {/* ── Earnings scenarios table ── */}
+        <View style={styles.card}>
+          <View style={styles.scenarioHeaderRow}>
+            <TableProperties size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Earnings Scenarios</Text>
+          </View>
+          <Text style={styles.scenarioSubtitle}>
+            Estimated daily earnings at various billing volumes (Medi-Cal rate: {formatCurrency(MEDI_CAL_RATE)}/unit).
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tableScroll}
+            contentContainerStyle={styles.tableScrollContent}
+          >
+            {/* Table header */}
+            <View>
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.tableCellHeader, styles.tableCellFirst]}>
+                  <Text style={styles.tableHeaderText}>Scenario</Text>
+                </View>
+                <View style={[styles.tableCell, styles.tableCellHeader]}>
+                  <Text style={styles.tableHeaderText}>Units/Day</Text>
+                </View>
+                <View style={[styles.tableCell, styles.tableCellHeader]}>
+                  <Text style={styles.tableHeaderText}>Gross/Day</Text>
+                </View>
+                <View style={[styles.tableCell, styles.tableCellHeader]}>
+                  <Text style={styles.tableHeaderText}>Net P1/Day</Text>
+                </View>
+                <View style={[styles.tableCell, styles.tableCellHeader]}>
+                  <Text style={styles.tableHeaderText}>Net P2/Day</Text>
+                </View>
+              </View>
+              {/* Table body */}
+              {EARNINGS_SCENARIOS.map((scenario, index) => {
+                const gross = scenario.unitsPerDay * MEDI_CAL_RATE;
+                const netP1 = gross * PHASE_1_RATE;
+                const netP2 = gross * PHASE_2_RATE;
+                const isEven = index % 2 === 0;
+                return (
+                  <View
+                    key={scenario.label}
+                    style={[styles.tableRow, isEven && styles.tableRowShaded]}
+                  >
+                    <View style={[styles.tableCell, styles.tableCellFirst]}>
+                      <Text style={styles.tableCellLabelText}>{scenario.label}</Text>
+                    </View>
+                    <View style={styles.tableCell}>
+                      <Text style={styles.tableCellText}>{scenario.unitsPerDay}</Text>
+                    </View>
+                    <View style={styles.tableCell}>
+                      <Text style={styles.tableCellText}>{formatCurrency(gross)}</Text>
+                    </View>
+                    <View style={styles.tableCell}>
+                      <Text style={[styles.tableCellText, styles.tableCellNetP1]}>
+                        {formatCurrency(netP1)}
+                      </Text>
+                    </View>
+                    <View style={styles.tableCell}>
+                      <Text style={[styles.tableCellText, styles.tableCellNetP2]}>
+                        {formatCurrency(netP2)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+          {/* Phase footnote */}
+          <View style={styles.phaseFootnote}>
+            <Text style={styles.phaseFootnoteText}>
+              <Text style={styles.phaseFootnoteBold}>Phase 1 (72%)</Text>
+              {' '}— Launch rate during initial CHW onboarding period (first 6 months).{' '}
+              <Text style={styles.phaseFootnoteBold}>Phase 2 (82.6%)</Text>
+              {' '}— Graduated rate after performance milestones are met.
+            </Text>
+          </View>
+        </View>
+
         {/* ── Payout schedule note ── */}
         <View style={styles.noteCard}>
           <View style={[styles.noteIconCircle, { backgroundColor: colors.primary + '18' }]}>
@@ -283,7 +385,7 @@ export function CHWEarningsScreen(): React.JSX.Element {
 
         {/* Medi-Cal rate footnote */}
         <Text style={styles.footnote}>
-          Rate: $26.66/unit (15 min) · 85% CHW net payout after platform fees.
+          Rate: $26.66/unit (15 min) · Phase 1: 72% net · Phase 2: 82.6% net.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -500,5 +602,87 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.mutedForeground,
     textAlign: 'center',
+  },
+
+  // ── Earnings scenario table ─────────────────────────────────────────────────
+  scenarioHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  scenarioSubtitle: {
+    ...typography.bodySm,
+    color: colors.mutedForeground,
+    marginBottom: 14,
+  },
+  tableScroll: {
+    marginHorizontal: -4,
+  },
+  tableScrollContent: {
+    paddingHorizontal: 4,
+  },
+  tableRow: {
+    flexDirection: 'row',
+  },
+  tableRowShaded: {
+    backgroundColor: colors.background,
+  },
+  tableCell: {
+    width: 90,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tableCellFirst: {
+    width: 100,
+    alignItems: 'flex-start',
+  },
+  tableCellHeader: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary + '40',
+    paddingBottom: 8,
+  },
+  tableHeaderText: {
+    ...typography.label,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+  },
+  tableCellText: {
+    ...typography.bodySm,
+    color: colors.foreground,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  tableCellLabelText: {
+    ...typography.bodySm,
+    fontWeight: '700',
+    color: colors.foreground,
+  },
+  tableCellNetP1: {
+    color: colors.secondary,
+    fontWeight: '700',
+  },
+  tableCellNetP2: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  phaseFootnote: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  phaseFootnoteText: {
+    ...typography.label,
+    color: colors.mutedForeground,
+    lineHeight: 18,
+  },
+  phaseFootnoteBold: {
+    fontWeight: '700',
+    color: colors.foreground,
   },
 });
