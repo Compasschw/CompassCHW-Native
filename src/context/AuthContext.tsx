@@ -36,6 +36,8 @@ interface AuthContextValue extends AuthState {
     role: string,
     phone?: string,
   ) => Promise<void>;
+  /** Bypass API — set auth state directly from mock data (for demos). */
+  loginMock: (role: UserRole, name: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -131,6 +133,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     [persistAuthState],
   );
 
+  // ── loginMock (demo/offline fallback) ───────────────────────────────────────
+  const loginMock = useCallback(async (role: UserRole, name: string): Promise<void> => {
+    const newState: AuthState = {
+      isAuthenticated: true,
+      userRole: role,
+      userName: name,
+    };
+    await persistAuthState(newState);
+    setAuthState(newState);
+  }, [persistAuthState]);
+
   // ── logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(async (): Promise<void> => {
     try {
@@ -151,8 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
   // ── Context value ──────────────────────────────────────────────────────────
   const value = useMemo<AuthContextValue>(
-    () => ({ ...authState, isLoading, login, register, logout }),
-    [authState, isLoading, login, register, logout],
+    () => ({ ...authState, isLoading, login, register, loginMock, logout }),
+    [authState, isLoading, login, register, loginMock, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

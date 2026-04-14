@@ -27,12 +27,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
 
+import { Image } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography, fonts } from '../../theme/typography';
 import { shadows } from '../../theme/shadows';
 import { radii, spacing } from '../../theme/spacing';
 import type { UserRole } from '../../data/mock';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const compassIcon = require('../../../assets/compass-icon.png') as number;
 
 // ─── Demo accounts ─────────────────────────────────────────────────────────────
 
@@ -112,9 +116,9 @@ function AppleIcon(): React.JSX.Element {
  * to swap to the authenticated stack — no explicit navigation call needed.
  */
 export function LoginScreen(): React.JSX.Element {
-  const { login, register } = useAuth();
+  const { login, register, loginMock } = useAuth();
 
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -162,15 +166,12 @@ export function LoginScreen(): React.JSX.Element {
     try {
       await login(account.email, account.password);
     } catch {
-      try {
-        await register(account.email, 'demo1234', account.name, account.role);
-      } catch {
-        setError('Demo login failed. Check your connection.');
-      }
+      // Backend unavailable — fall back to mock login (demo mode)
+      await loginMock(account.role, account.name);
     } finally {
       setIsLoading(false);
     }
-  }, [login, register]);
+  }, [login, loginMock]);
 
   // ── Social login (coming soon) ────────────────────────────────────────────
 
@@ -206,7 +207,7 @@ export function LoginScreen(): React.JSX.Element {
         >
           {/* ── Logo wordmark ─────────────────────────────────────────────── */}
           <View style={s.logoRow}>
-            <View style={s.logoPulse} />
+            <Image source={compassIcon} style={s.logoIcon} />
             <Text style={s.wordmark}>
               Compass<Text style={s.wordmarkAccent}>CHW</Text>
             </Text>
@@ -453,10 +454,10 @@ const s = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
-    gap: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
 
   // ── Logo ──────────────────────────────────────────────────────────────────
@@ -465,11 +466,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  logoPulse: {
-    width: 10,
-    height: 10,
-    borderRadius: radii.full,
-    backgroundColor: colors.secondary,
+  logoIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
   },
   wordmark: {
     fontFamily: fonts.display,
@@ -504,9 +504,9 @@ const s = StyleSheet.create({
   },
   headline: {
     fontFamily: fonts.display,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.8,
+    fontSize: 36,
+    lineHeight: 42,
+    letterSpacing: -1,
     color: colors.foreground,
   },
   headlineAccent: {
