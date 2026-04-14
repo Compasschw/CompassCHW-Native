@@ -1,16 +1,21 @@
 /**
- * LandingScreen — Full mobile replica of the CompassCHW Lovable web landing page.
+ * LandingScreen — Responsive replica of the CompassCHW Lovable landing page.
  *
- * Sections (top to bottom, matching Lovable exactly on mobile viewport):
- *   1.  Sticky Navbar        — logo left, "Join Waitlist" button right
- *   2.  Hero                 — toggle pill, badge, headline, description, CTA buttons, trust badges
- *   3.  ClientSlider         — "Trusted Partners" heading + horizontally scrolling partner cards
- *   4.  Services             — eyebrow, heading, description, service cards (2-col grid), stats bar
- *   5.  How It Works         — dark green section, 3 steps centered vertically
- *   6.  For CHWs             — CHW image with earnings overlay card, benefits list, CTA
- *   7.  Mobile First         — checklist items, phone mockup UI, "Get the App" button
- *   8.  CTA Section          — neighborhood image with green overlay, heading, two CTA buttons
- *   9.  Footer               — dark green, logo, 3 link columns, social row, copyright
+ * Layout adapts at 1024 px (isDesktop):
+ *   - Desktop: 2-column hero, 5-col services row, horizontal "How It Works" with
+ *     connecting line, 2-col For CHWs, 2-col Mobile First, 4-col footer.
+ *   - Mobile:  single column throughout, stacked buttons, 2-col service grid.
+ *
+ * Sections (top to bottom):
+ *   1.  Sticky Navbar
+ *   2.  Hero (toggle pill + 2-col on desktop)
+ *   3.  Client Slider (trusted partners)
+ *   4.  Services (cream bg, 5-col on desktop, stats bar)
+ *   5.  How It Works (dark green, 3-step row on desktop)
+ *   6.  For CHWs (cream bg, 2-col on desktop)
+ *   7.  Mobile First (nude bg, 2-col on desktop)
+ *   8.  CTA Section (neighborhood image + green overlay)
+ *   9.  Footer (dark green, 4-col on desktop)
  */
 
 import React, { useState, useCallback, useRef } from 'react';
@@ -25,6 +30,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -57,9 +63,21 @@ import type { AuthStackParamList } from '../navigation/AppNavigator';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const compassIcon = require('../../assets/compass-icon.png') as number;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
+const heroChwImage = require('../../assets/hero-chw.jpg') as number;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const heroMemberImage = require('../../assets/hero-member.jpg') as number;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const chwMobileImage = require('../../assets/chw-mobile.jpg') as number;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const neighborhoodImage = require('../../assets/neighborhood.jpg') as number;
+
+// ─── Layout constants ─────────────────────────────────────────────────────────
+
+/** Viewport width breakpoint above which the desktop 2-column layout is used. */
+const DESKTOP_BREAKPOINT = 1024;
+
+/** Maximum content width on desktop — mirrors Lovable's `max-w-7xl`. */
+const MAX_CONTENT_WIDTH = 1280;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +103,7 @@ interface HeroContent {
   primaryButtonLabel: string;
   primaryButtonRoute: keyof AuthStackParamList;
   secondaryButtonLabel: string;
+  heroImage: number;
   badges: TrustBadge[];
 }
 
@@ -93,12 +112,14 @@ const CHW_HERO: HeroContent = {
   headlineAccent: 'on your terms.',
   descriptionPre: 'Compass connects ',
   descriptionBold1: 'Community Health Workers',
-  descriptionMid: ' with residents who need help navigating housing, food, recovery, and healthcare — and ',
+  descriptionMid:
+    ' with residents who need help navigating housing, food, recovery, and healthcare — and ',
   descriptionBold2: 'pays you for your service',
   descriptionPost: ' through Medi-Cal.',
   primaryButtonLabel: 'Start Earning as a CHW',
   primaryButtonRoute: 'Login',
   secondaryButtonLabel: 'I Need Help',
+  heroImage: heroChwImage,
   badges: [
     { icon: Shield, label: 'HIPAA Compliant' },
     { icon: CheckCircle, label: 'Medi-Cal Reimbursed' },
@@ -117,6 +138,7 @@ const MEMBER_HERO: HeroContent = {
   primaryButtonLabel: 'Get Matched with a CHW',
   primaryButtonRoute: 'Waitlist',
   secondaryButtonLabel: 'Learn More',
+  heroImage: heroMemberImage,
   badges: [
     { icon: Heart, label: '100% Free' },
     { icon: Users, label: 'Bilingual CHWs' },
@@ -192,6 +214,14 @@ const STATS: Stat[] = [
   { value: '$0', label: 'Cost to members' },
 ];
 
+// ─── Hero stats (floating card on hero image) ─────────────────────────────────
+
+const HERO_STATS = [
+  { label: 'ACTIVE CHWs', value: '200+' },
+  { label: 'AVG. EARNINGS', value: '$32/hour' },
+  { label: 'MEMBER COST', value: '$0' },
+];
+
 // ─── How-It-Works steps ───────────────────────────────────────────────────────
 
 interface Step {
@@ -206,19 +236,22 @@ const HOW_IT_WORKS: Step[] = [
     icon: Briefcase,
     number: '01',
     title: 'Sign up as a CHW',
-    description: 'Create your profile, verify your training, and set your availability. It takes under 5 minutes.',
+    description:
+      'Create your profile, verify your training, and set your availability. It takes under 5 minutes.',
   },
   {
     icon: Users,
     number: '02',
     title: 'Get matched with members',
-    description: 'Compass connects you with community members in your neighborhood who need support — housing, food, recovery, or healthcare.',
+    description:
+      'Compass connects you with community members in your neighborhood who need support — housing, food, recovery, or healthcare.',
   },
   {
     icon: DollarSign,
     number: '03',
     title: 'Complete sessions & get paid',
-    description: 'Meet with members, log your sessions, and get reimbursed through Medi-Cal. Track your earnings in real time.',
+    description:
+      'Meet with members, log your sessions, and get reimbursed through Medi-Cal. Track your earnings in real time.',
   },
 ];
 
@@ -288,7 +321,6 @@ const FOOTER_COLUMNS: FooterColumn[] = [
 
 /**
  * Animated pulsing green dot for the "Launching in Los Angeles" badge.
- * Uses Animated (core RN) to avoid a reanimated dependency.
  */
 function PulsingDot(): React.JSX.Element {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -304,59 +336,67 @@ function PulsingDot(): React.JSX.Element {
     return () => pulse.stop();
   }, [opacity]);
 
-  return <Animated.View style={[pulseDotStyles.dot, { opacity }]} />;
+  return <Animated.View style={[staticStyles.pulseDot, { opacity }]} />;
 }
 
-const pulseDotStyles = StyleSheet.create({
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.secondary,
-  },
-});
-
-// ─── Checkmark icon (used in Mobile First section) ───────────────────────────
+// ─── Checkmark icon ───────────────────────────────────────────────────────────
 
 /**
- * Small green circle with a white checkmark, matching the SVG checkmark
- * in the Lovable MobileFirst component.
+ * Small green circle with a white checkmark used in the Mobile First checklist.
  */
 function CheckmarkCircle(): React.JSX.Element {
   return (
-    <View style={checkmarkStyles.circle}>
-      <Text style={checkmarkStyles.mark}>✓</Text>
+    <View style={staticStyles.checkmarkCircle}>
+      <Text style={staticStyles.checkmarkText}>✓</Text>
     </View>
   );
 }
 
-const checkmarkStyles = StyleSheet.create({
-  circle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  mark: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontFamily: fonts.bodySemibold,
-    lineHeight: 18,
-  },
-});
+// ─── Content wrapper ─────────────────────────────────────────────────────────
+
+/**
+ * Constrains children to MAX_CONTENT_WIDTH and centers them on desktop.
+ * On mobile, it is transparent (no max-width constraint).
+ */
+function ContentWrapper({
+  children,
+  style,
+  isDesktop,
+}: {
+  children: React.ReactNode;
+  style?: object;
+  isDesktop: boolean;
+}): React.JSX.Element {
+  if (!isDesktop) {
+    return <View style={style}>{children}</View>;
+  }
+  return (
+    <View
+      style={[
+        {
+          maxWidth: MAX_CONTENT_WIDTH,
+          width: '100%',
+          alignSelf: 'center',
+          paddingHorizontal: 48,
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
 
 // ─── LandingScreen ────────────────────────────────────────────────────────────
 
 /**
- * Full marketing landing screen.
- * Matches the Lovable web landing page section-for-section on a mobile viewport.
+ * Full marketing landing screen, responsive to desktop (≥1024 px) and mobile.
  */
 export function LandingScreen(): React.JSX.Element {
   const navigation = useNavigation<LandingNavProp>();
   const [activeTab, setActiveTab] = useState<ActiveTab>('chw');
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= DESKTOP_BREAKPOINT;
 
   const heroContent = activeTab === 'chw' ? CHW_HERO : MEMBER_HERO;
 
@@ -378,35 +418,50 @@ export function LandingScreen(): React.JSX.Element {
     navigation.navigate('Login');
   }, [navigation]);
 
-  return (
-    <SafeAreaView style={s.safeArea} edges={['top']}>
+  const px = isDesktop ? 48 : spacing.lg;
+  const sectionPy = isDesktop ? 96 : spacing.xxl;
 
-      {/* ── Fixed navbar ─────────────────────────────────────────────────── */}
-      <View style={s.navbar}>
-        <View style={s.navbarLeft}>
-          <Image
-            source={compassIcon}
-            style={s.navLogo}
-            accessibilityIgnoresInvertColors
-          />
-          <Text style={s.navWordmark}>
-            Compass<Text style={s.navWordmarkAccent}>CHW</Text>
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={s.navJoinButton}
-          onPress={handleWaitlistPress}
-          activeOpacity={0.82}
-          accessibilityLabel="Join waitlist"
-          accessibilityRole="button"
-        >
-          <Text style={s.navJoinButtonText}>Join Waitlist</Text>
-        </TouchableOpacity>
+  // Compute service card width dynamically — 5 columns on desktop, 2 on mobile.
+  // The grid uses gap: 12; on desktop the container is MAX_CONTENT_WIDTH - 2*px.
+  const serviceGridGap = isDesktop ? 20 : 10;
+  const serviceCardCount = isDesktop ? 5 : 2;
+
+  return (
+    <SafeAreaView style={staticStyles.safeArea} edges={['top']}>
+
+      {/* ── Fixed navbar ───────────────────────────────────────────────────── */}
+      <View
+        style={[
+          staticStyles.navbar,
+          isDesktop && staticStyles.navbarDesktop,
+        ]}
+      >
+        <ContentWrapper isDesktop={isDesktop} style={staticStyles.navbarInner}>
+          <View style={staticStyles.navbarLeft}>
+            <Image
+              source={compassIcon}
+              style={staticStyles.navLogo}
+              accessibilityIgnoresInvertColors
+            />
+            <Text style={staticStyles.navWordmark}>
+              Compass<Text style={staticStyles.navWordmarkAccent}>CHW</Text>
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={staticStyles.navJoinButton}
+            onPress={handleWaitlistPress}
+            activeOpacity={0.82}
+            accessibilityLabel="Join waitlist"
+            accessibilityRole="button"
+          >
+            <Text style={staticStyles.navJoinButtonText}>Join Waitlist</Text>
+          </TouchableOpacity>
+        </ContentWrapper>
       </View>
 
       <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.scrollContent}
+        style={staticStyles.scroll}
+        contentContainerStyle={staticStyles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
 
@@ -414,110 +469,220 @@ export function LandingScreen(): React.JSX.Element {
             SECTION 1 — HERO
         ════════════════════════════════════════════════════════════════ */}
 
-        {/* Toggle pill — centered above hero content */}
-        <View style={s.toggleContainer}>
-          <View style={s.togglePill}>
-            <Pressable
-              style={[s.toggleTab, activeTab === 'chw' && s.toggleTabActive]}
-              onPress={() => setActiveTab('chw')}
-              accessibilityRole="button"
-              accessibilityLabel="I'm a CHW"
-              accessibilityState={{ selected: activeTab === 'chw' }}
-            >
-              <Text style={[s.toggleTabText, activeTab === 'chw' && s.toggleTabTextActive]}>
-                I'm a CHW
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[s.toggleTab, activeTab === 'member' && s.toggleTabActive]}
-              onPress={() => setActiveTab('member')}
-              accessibilityRole="button"
-              accessibilityLabel="I'm a Community Member"
-              accessibilityState={{ selected: activeTab === 'member' }}
-            >
-              <Text style={[s.toggleTabText, activeTab === 'member' && s.toggleTabTextActive]}>
-                I'm a Community Member
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Hero content */}
-        <View style={s.heroSection}>
-          {/* Launch badge */}
-          <View style={s.heroBadge}>
-            <PulsingDot />
-            <Text style={s.heroBadgeText}>Launching in Los Angeles</Text>
+        <View
+          style={[
+            staticStyles.heroOuter,
+            { paddingHorizontal: isDesktop ? 0 : 0 },
+          ]}
+        >
+          {/* Toggle pill — centered above everything */}
+          <View style={[staticStyles.toggleContainer, { paddingTop: isDesktop ? 64 : spacing.xl }]}>
+            <View style={staticStyles.togglePill}>
+              <Pressable
+                style={[staticStyles.toggleTab, activeTab === 'chw' && staticStyles.toggleTabActive]}
+                onPress={() => setActiveTab('chw')}
+                accessibilityRole="button"
+                accessibilityLabel="I'm a CHW"
+                accessibilityState={{ selected: activeTab === 'chw' }}
+              >
+                <Text style={[staticStyles.toggleTabText, activeTab === 'chw' && staticStyles.toggleTabTextActive]}>
+                  I'm a CHW
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[staticStyles.toggleTab, activeTab === 'member' && staticStyles.toggleTabActive]}
+                onPress={() => setActiveTab('member')}
+                accessibilityRole="button"
+                accessibilityLabel="I'm a Community Member"
+                accessibilityState={{ selected: activeTab === 'member' }}
+              >
+                <Text style={[staticStyles.toggleTabText, activeTab === 'member' && staticStyles.toggleTabTextActive]}>
+                  I'm a Community Member
+                </Text>
+              </Pressable>
+            </View>
           </View>
 
-          {/* Headline — accent word in secondary green */}
-          <Text style={s.heroHeadline}>
-            {heroContent.headline}
-            <Text style={s.heroHeadlineAccent}>{heroContent.headlineAccent}</Text>
-          </Text>
-
-          {/* Description — matches Lovable's <strong> bolded words */}
-          <Text style={s.heroDescription}>
-            {heroContent.descriptionPre}
-            <Text style={s.heroDescriptionBold}>{heroContent.descriptionBold1}</Text>
-            {heroContent.descriptionMid}
-            <Text style={s.heroDescriptionBold}>{heroContent.descriptionBold2}</Text>
-            {heroContent.descriptionPost}
-          </Text>
-
-          {/* CTA buttons — stacked full-width on mobile (flex-col in Lovable) */}
-          <View style={s.heroButtonsCol}>
-            <TouchableOpacity
-              style={s.heroPrimaryButton}
-              onPress={handlePrimaryPress}
-              activeOpacity={0.85}
-              accessibilityLabel={heroContent.primaryButtonLabel}
-              accessibilityRole="button"
+          {/* Hero body — 2-col on desktop, single col on mobile */}
+          <ContentWrapper
+            isDesktop={isDesktop}
+            style={[
+              staticStyles.heroContent,
+              {
+                paddingTop: isDesktop ? 56 : spacing.xl,
+                paddingBottom: isDesktop ? 96 : spacing.xxl,
+                paddingHorizontal: isDesktop ? 48 : px,
+              },
+            ]}
+          >
+            <View
+              style={[
+                staticStyles.heroColumns,
+                {
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  gap: isDesktop ? 64 : spacing.xl,
+                  alignItems: isDesktop ? 'center' : 'stretch',
+                },
+              ]}
             >
-              <Text style={s.heroPrimaryButtonText}>{heroContent.primaryButtonLabel}</Text>
-              <ArrowRight size={16} color="#FFFFFF" />
-            </TouchableOpacity>
+              {/* Left column — text */}
+              <View style={[staticStyles.heroTextCol, { flex: isDesktop ? 1 : undefined }]}>
+                {/* Launch badge */}
+                <View style={staticStyles.heroBadge}>
+                  <PulsingDot />
+                  <Text style={staticStyles.heroBadgeText}>Launching in Los Angeles</Text>
+                </View>
 
-            <TouchableOpacity
-              style={s.heroSecondaryButton}
-              onPress={handleSecondaryPress}
-              activeOpacity={0.75}
-              accessibilityLabel={heroContent.secondaryButtonLabel}
-              accessibilityRole="button"
-            >
-              <Text style={s.heroSecondaryButtonText}>{heroContent.secondaryButtonLabel}</Text>
-            </TouchableOpacity>
-          </View>
+                {/* Headline */}
+                <Text
+                  style={[
+                    staticStyles.heroHeadline,
+                    {
+                      fontSize: isDesktop ? 72 : 40,
+                      lineHeight: isDesktop ? 76 : 44,
+                      letterSpacing: isDesktop ? -2 : -1,
+                    },
+                  ]}
+                >
+                  {heroContent.headline}
+                  <Text style={staticStyles.heroHeadlineAccent}>{heroContent.headlineAccent}</Text>
+                </Text>
 
-          {/* Trust badges — 3 pills in a row */}
-          <View style={s.trustBadgesRow}>
-            {heroContent.badges.map((badge) => (
-              <View key={badge.label} style={s.trustBadge}>
-                <badge.icon size={14} color={colors.primary} />
-                <Text style={s.trustBadgeText}>{badge.label}</Text>
+                {/* Description */}
+                <Text
+                  style={[
+                    staticStyles.heroDescription,
+                    { fontSize: isDesktop ? 18 : 16, lineHeight: isDesktop ? 28 : 26 },
+                  ]}
+                >
+                  {heroContent.descriptionPre}
+                  <Text style={staticStyles.heroDescriptionBold}>{heroContent.descriptionBold1}</Text>
+                  {heroContent.descriptionMid}
+                  <Text style={staticStyles.heroDescriptionBold}>{heroContent.descriptionBold2}</Text>
+                  {heroContent.descriptionPost}
+                </Text>
+
+                {/* CTA buttons — side by side on desktop, stacked on mobile */}
+                <View
+                  style={[
+                    staticStyles.heroButtons,
+                    {
+                      flexDirection: isDesktop ? 'row' : 'column',
+                      gap: isDesktop ? 12 : 10,
+                      marginTop: spacing.sm,
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      staticStyles.heroPrimaryButton,
+                      isDesktop && staticStyles.heroPrimaryButtonDesktop,
+                    ]}
+                    onPress={handlePrimaryPress}
+                    activeOpacity={0.85}
+                    accessibilityLabel={heroContent.primaryButtonLabel}
+                    accessibilityRole="button"
+                  >
+                    <Text style={staticStyles.heroPrimaryButtonText}>
+                      {heroContent.primaryButtonLabel}
+                    </Text>
+                    <ArrowRight size={16} color="#FFFFFF" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      staticStyles.heroSecondaryButton,
+                      isDesktop && staticStyles.heroSecondaryButtonDesktop,
+                    ]}
+                    onPress={handleSecondaryPress}
+                    activeOpacity={0.75}
+                    accessibilityLabel={heroContent.secondaryButtonLabel}
+                    accessibilityRole="button"
+                  >
+                    <Text style={staticStyles.heroSecondaryButtonText}>
+                      {heroContent.secondaryButtonLabel}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Trust badges */}
+                <View style={staticStyles.trustBadgesRow}>
+                  {heroContent.badges.map((badge) => (
+                    <View key={badge.label} style={staticStyles.trustBadge}>
+                      <badge.icon size={14} color={colors.primary} />
+                      <Text style={staticStyles.trustBadgeText}>{badge.label}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            ))}
-          </View>
+
+              {/* Right column — hero image (desktop only / stacked on mobile) */}
+              <View
+                style={[
+                  staticStyles.heroImageCol,
+                  { flex: isDesktop ? 1 : undefined, display: isDesktop ? 'flex' : 'flex' },
+                ]}
+              >
+                <View style={staticStyles.heroImageWrap}>
+                  <Image
+                    source={heroContent.heroImage}
+                    style={[
+                      staticStyles.heroImage,
+                      { height: isDesktop ? 560 : 280 },
+                    ]}
+                    accessibilityIgnoresInvertColors
+                    accessibilityLabel="Community Health Worker smiling"
+                    resizeMode="cover"
+                  />
+
+                  {/* Floating stats card at bottom of image */}
+                  <View style={staticStyles.heroStatsCard}>
+                    {HERO_STATS.map((stat, index) => (
+                      <React.Fragment key={stat.label}>
+                        <View style={staticStyles.heroStatItem}>
+                          <Text style={staticStyles.heroStatLabel}>{stat.label}</Text>
+                          <Text style={staticStyles.heroStatValue}>{stat.value}</Text>
+                        </View>
+                        {index < HERO_STATS.length - 1 && (
+                          <View style={staticStyles.heroStatDivider} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </View>
+          </ContentWrapper>
         </View>
 
         {/* ════════════════════════════════════════════════════════════════
             SECTION 2 — CLIENT SLIDER
         ════════════════════════════════════════════════════════════════ */}
-        <View style={s.clientSliderSection}>
-          <Text style={s.clientSliderEyebrow}>Trusted Partners</Text>
-          <Text style={s.clientSliderHeading}>Working with leading health organizations</Text>
+        <View style={[staticStyles.clientSliderSection, { paddingVertical: sectionPy }]}>
+          <Text style={staticStyles.clientSliderEyebrow}>Trusted Partners</Text>
+          <Text
+            style={[
+              staticStyles.clientSliderHeading,
+              { fontSize: isDesktop ? 40 : 22, lineHeight: isDesktop ? 46 : 28 },
+            ]}
+          >
+            Working with leading health organizations
+          </Text>
 
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.clientCardsScroll}
+            contentContainerStyle={[
+              staticStyles.clientCardsScroll,
+              { paddingHorizontal: isDesktop ? 48 : spacing.lg },
+            ]}
           >
             {PARTNER_LOGOS.map((logo) => (
-              <View key={logo.name} style={s.clientCard}>
-                <View style={s.clientCardInitialsWrap}>
-                  <Text style={s.clientCardInitials}>{logo.initials}</Text>
+              <View key={logo.name} style={staticStyles.clientCard}>
+                <View style={staticStyles.clientCardInitialsWrap}>
+                  <Text style={staticStyles.clientCardInitials}>{logo.initials}</Text>
                 </View>
-                <Text style={s.clientCardName}>{logo.name}</Text>
+                <Text style={staticStyles.clientCardName}>{logo.name}</Text>
               </View>
             ))}
           </ScrollView>
@@ -526,237 +691,312 @@ export function LandingScreen(): React.JSX.Element {
         {/* ════════════════════════════════════════════════════════════════
             SECTION 3 — SERVICES
         ════════════════════════════════════════════════════════════════ */}
-        <View style={s.servicesSection}>
-          <Text style={s.sectionEyebrow}>Service Areas</Text>
-          <Text style={s.sectionHeading}>
-            Where <Text style={s.sectionHeadingBold}>CHWs make an impact</Text>
-          </Text>
-          <Text style={s.servicesSubheading}>
-            As a Compass CHW, you'll guide members through these critical service areas — and get reimbursed for each session.
-          </Text>
+        <View style={[staticStyles.servicesSection, { paddingVertical: sectionPy }]}>
+          <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
+            <Text style={[staticStyles.eyebrowLabel, staticStyles.eyebrowCentered]}>
+              Service Areas
+            </Text>
+            <Text
+              style={[
+                staticStyles.sectionHeading,
+                staticStyles.textCentered,
+                { fontSize: isDesktop ? 56 : 32, lineHeight: isDesktop ? 60 : 36 },
+              ]}
+            >
+              Where CHWs make an impact
+            </Text>
+            <Text
+              style={[
+                staticStyles.sectionSubheading,
+                staticStyles.textCentered,
+                { marginBottom: isDesktop ? 48 : 24 },
+              ]}
+            >
+              As a Compass CHW, you'll guide members through these critical service areas — and get
+              reimbursed for each session.
+            </Text>
 
-          {/* 2-column grid of service cards */}
-          <View style={s.serviceCardsGrid}>
-            {SERVICE_CARDS.map((card) => (
-              <View key={card.title} style={s.serviceCard}>
-                <View style={s.serviceCardIconWrap}>
-                  <card.icon size={22} color={colors.primary} />
+            {/* Service cards — 5-col row on desktop, 2-col grid on mobile */}
+            <View
+              style={[
+                staticStyles.serviceCardsGrid,
+                {
+                  flexDirection: 'row',
+                  flexWrap: isDesktop ? 'nowrap' : 'wrap',
+                  gap: serviceGridGap,
+                },
+              ]}
+            >
+              {SERVICE_CARDS.map((card) => (
+                <ServiceCardItem
+                  key={card.title}
+                  card={card}
+                  isDesktop={isDesktop}
+                  gridGap={serviceGridGap}
+                  cardCount={serviceCardCount}
+                  containerWidth={
+                    isDesktop
+                      ? Math.min(width, MAX_CONTENT_WIDTH) - 96
+                      : width - px * 2
+                  }
+                />
+              ))}
+            </View>
+
+            {/* Stats bar */}
+            <View
+              style={[
+                staticStyles.statsBar,
+                {
+                  marginTop: isDesktop ? 56 : 24,
+                  flexDirection: 'row',
+                  flexWrap: isDesktop ? 'nowrap' : 'wrap',
+                },
+              ]}
+            >
+              {STATS.map((stat, index) => (
+                <View
+                  key={stat.value}
+                  style={[
+                    staticStyles.statCell,
+                    { width: isDesktop ? `${100 / 4}%` : '50%' },
+                    !isDesktop && index % 2 !== 1 && staticStyles.statCellBorderRight,
+                    !isDesktop && index < 2 && staticStyles.statCellBorderBottom,
+                    isDesktop && index < 3 && staticStyles.statCellBorderRight,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      staticStyles.statValue,
+                      { fontSize: isDesktop ? 56 : 40, lineHeight: isDesktop ? 60 : 48 },
+                    ]}
+                  >
+                    {stat.value}
+                  </Text>
+                  <Text style={staticStyles.statLabel}>{stat.label}</Text>
                 </View>
-                <Text style={s.serviceCardTitle}>{card.title}</Text>
-                <Text style={s.serviceCardDescription}>{card.description}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Stats bar — 2×2 grid, dark green rounded card */}
-          <View style={s.statsBar}>
-            {STATS.map((stat, index) => (
-              <View
-                key={stat.value}
-                style={[
-                  s.statCell,
-                  index % 2 !== 1 && s.statCellBorderRight,
-                  index < 2 && s.statCellBorderBottom,
-                ]}
-              >
-                <Text style={s.statValue}>{stat.value}</Text>
-                <Text style={s.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          </ContentWrapper>
         </View>
 
         {/* ════════════════════════════════════════════════════════════════
             SECTION 4 — HOW IT WORKS
         ════════════════════════════════════════════════════════════════ */}
-        <View style={s.howItWorksSection}>
-          <Text style={s.howEyebrow}>How It Works</Text>
-          <Text style={s.howHeading}>
-            Three steps to <Text style={s.howHeadingBold}>start earning</Text>
-          </Text>
+        <View style={[staticStyles.howItWorksSection, { paddingVertical: sectionPy }]}>
+          <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
+            <Text style={staticStyles.howEyebrow}>How It Works</Text>
+            <Text
+              style={[
+                staticStyles.howHeading,
+                { fontSize: isDesktop ? 56 : 32, lineHeight: isDesktop ? 60 : 36 },
+              ]}
+            >
+              Three steps to{' '}
+              <Text style={staticStyles.howHeadingHighlight}>start earning</Text>
+            </Text>
 
-          <View style={s.stepsContainer}>
-            {HOW_IT_WORKS.map((step) => (
-              <View key={step.number} style={s.stepItem}>
-                <View style={s.stepIconCircle}>
-                  <step.icon size={24} color={colors.primary} />
-                </View>
-                <Text style={s.stepTitle}>{step.title}</Text>
-                <Text style={s.stepDescription}>{step.description}</Text>
+            {/* Steps container — row with connecting line on desktop */}
+            <View style={{ position: 'relative', marginTop: isDesktop ? 56 : 8 }}>
+              {/* Horizontal connecting line — desktop only */}
+              {isDesktop && (
+                <View style={staticStyles.stepsConnectingLine} />
+              )}
+
+              <View
+                style={[
+                  staticStyles.stepsRow,
+                  {
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    gap: isDesktop ? 40 : spacing.xxl,
+                    alignItems: isDesktop ? 'flex-start' : 'center',
+                  },
+                ]}
+              >
+                {HOW_IT_WORKS.map((step) => (
+                  <View
+                    key={step.number}
+                    style={[
+                      staticStyles.stepItem,
+                      { flex: isDesktop ? 1 : undefined },
+                    ]}
+                  >
+                    <View style={staticStyles.stepIconCircle}>
+                      <step.icon size={24} color={colors.primary} />
+                    </View>
+                    <Text
+                      style={[
+                        staticStyles.stepTitle,
+                        { fontSize: isDesktop ? 24 : 18 },
+                      ]}
+                    >
+                      {step.title}
+                    </Text>
+                    <Text style={staticStyles.stepDescription}>{step.description}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+            </View>
+          </ContentWrapper>
         </View>
 
         {/* ════════════════════════════════════════════════════════════════
             SECTION 5 — FOR CHWs
         ════════════════════════════════════════════════════════════════ */}
-        <View style={s.forChwsSection}>
-          {/* CHW image with earnings overlay — image sits on top on mobile */}
-          <View style={s.forChwsImageWrap}>
-            <Image
-              source={chwMobileImage}
-              style={s.forChwsImage}
-              accessibilityIgnoresInvertColors
-              accessibilityLabel="Community Health Worker using the Compass app on their phone"
-            />
-            {/* Gradient overlay (simulated with a semi-transparent dark view) */}
-            <View style={s.forChwsImageOverlay} />
-            {/* Earnings card overlay — pinned to bottom */}
-            <View style={s.earningsCard}>
-              <Text style={s.earningsCardLabel}>Avg. Earnings</Text>
-              <Text style={s.earningsCardValue}>
-                $32<Text style={s.earningsCardSuffix}> / hour</Text>
-              </Text>
-              <Text style={s.earningsCardNote}>Reimbursed via Medi-Cal</Text>
-            </View>
-          </View>
-
-          {/* Content */}
-          <Text style={s.forChwsEyebrow}>Why CHWs Choose Compass</Text>
-          <Text style={s.forChwsHeading}>
-            Earn money helping{' '}
-            <Text style={s.forChwsHeadingAccent}>your neighbors</Text>
-          </Text>
-          <Text style={s.forChwsBody}>
-            Join Compass as a CHW and get reimbursed for every session. Work flexible hours, stay local, and build a career making a real difference in your community.
-          </Text>
-
-          {/* Benefits — 2-column grid */}
-          <View style={s.benefitsGrid}>
-            {CHW_BENEFITS.map((benefit) => (
-              <View key={benefit.title} style={s.benefitItem}>
-                <View style={s.benefitIconWrap}>
-                  <benefit.icon size={20} color={colors.primary} />
-                </View>
-                <View style={s.benefitTextBlock}>
-                  <Text style={s.benefitTitle}>{benefit.title}</Text>
-                  <Text style={s.benefitDescription}>{benefit.description}</Text>
+        <View style={[staticStyles.forChwsSection, { paddingVertical: sectionPy }]}>
+          <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
+            <View
+              style={[
+                staticStyles.twoColRow,
+                {
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  gap: isDesktop ? 80 : spacing.xl,
+                  alignItems: isDesktop ? 'center' : 'stretch',
+                },
+              ]}
+            >
+              {/* Left — image */}
+              <View style={[staticStyles.forChwsImageCol, { flex: isDesktop ? 1 : undefined }]}>
+                <View style={staticStyles.forChwsImageWrap}>
+                  <Image
+                    source={chwMobileImage}
+                    style={[
+                      staticStyles.forChwsImage,
+                      { height: isDesktop ? 560 : 320 },
+                    ]}
+                    accessibilityIgnoresInvertColors
+                    accessibilityLabel="Community Health Worker using the Compass app"
+                    resizeMode="cover"
+                  />
+                  <View style={staticStyles.forChwsImageOverlay} />
+                  <View style={staticStyles.earningsCard}>
+                    <Text style={staticStyles.earningsCardLabel}>Avg. Earnings</Text>
+                    <Text style={staticStyles.earningsCardValue}>
+                      $32<Text style={staticStyles.earningsCardSuffix}> / hour</Text>
+                    </Text>
+                    <Text style={staticStyles.earningsCardNote}>Reimbursed via Medi-Cal</Text>
+                  </View>
                 </View>
               </View>
-            ))}
-          </View>
 
-          <TouchableOpacity
-            style={s.forChwsCta}
-            onPress={handleLoginPress}
-            activeOpacity={0.85}
-            accessibilityLabel="Start Earning Today"
-            accessibilityRole="button"
-          >
-            <Text style={s.forChwsCtaText}>Start Earning Today</Text>
-            <ArrowRight size={16} color="#FFFFFF" />
-          </TouchableOpacity>
+              {/* Right — content */}
+              <View style={[staticStyles.forChwsTextCol, { flex: isDesktop ? 1 : undefined }]}>
+                <Text style={staticStyles.eyebrowLabel}>Why CHWs Choose Compass</Text>
+                <Text
+                  style={[
+                    staticStyles.sectionHeading,
+                    { fontSize: isDesktop ? 48 : 28, lineHeight: isDesktop ? 52 : 34 },
+                  ]}
+                >
+                  Earn money helping{' '}
+                  <Text style={staticStyles.accentText}>your neighbors</Text>
+                </Text>
+                <Text style={staticStyles.bodyText}>
+                  Join Compass as a CHW and get reimbursed for every session. Work flexible hours,
+                  stay local, and build a career making a real difference in your community.
+                </Text>
+
+                {/* Benefits grid — 2×2 */}
+                <View style={staticStyles.benefitsGrid}>
+                  {CHW_BENEFITS.map((benefit) => (
+                    <View key={benefit.title} style={staticStyles.benefitItem}>
+                      <View style={staticStyles.benefitIconWrap}>
+                        <benefit.icon size={20} color={colors.primary} />
+                      </View>
+                      <View style={staticStyles.benefitTextBlock}>
+                        <Text style={staticStyles.benefitTitle}>{benefit.title}</Text>
+                        <Text style={staticStyles.benefitDescription}>{benefit.description}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={staticStyles.sectionCta}
+                  onPress={handleLoginPress}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Start Earning Today"
+                  accessibilityRole="button"
+                >
+                  <Text style={staticStyles.sectionCtaText}>Start Earning Today</Text>
+                  <ArrowRight size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ContentWrapper>
         </View>
 
         {/* ════════════════════════════════════════════════════════════════
             SECTION 6 — MOBILE FIRST
         ════════════════════════════════════════════════════════════════ */}
-        <View style={s.mobileFirstSection}>
-          <Text style={s.mobileFirstEyebrow}>Mobile-First Platform</Text>
-          <Text style={s.mobileFirstHeading}>
-            Manage your CHW work{' '}
-            <Text style={s.mobileFirstHeadingAccent}>from your pocket</Text>
-          </Text>
-          <Text style={s.mobileFirstBody}>
-            Accept requests, log sessions, track earnings, and communicate with members — all from your phone. Compass is built mobile-first because your work happens in the field, not behind a desk.
-          </Text>
+        <View style={[staticStyles.mobileFirstSection, { paddingVertical: sectionPy }]}>
+          <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
+            <View
+              style={[
+                staticStyles.twoColRow,
+                {
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  gap: isDesktop ? 80 : spacing.xl,
+                  alignItems: isDesktop ? 'center' : 'stretch',
+                },
+              ]}
+            >
+              {/* Left — text content */}
+              <View style={[staticStyles.mobileFirstTextCol, { flex: isDesktop ? 1 : undefined }]}>
+                <Text style={staticStyles.eyebrowLabel}>Mobile-First Platform</Text>
+                <Text
+                  style={[
+                    staticStyles.sectionHeading,
+                    { fontSize: isDesktop ? 48 : 28, lineHeight: isDesktop ? 52 : 34 },
+                  ]}
+                >
+                  Manage your CHW work{' '}
+                  <Text style={staticStyles.accentText}>from your pocket</Text>
+                </Text>
+                <Text style={staticStyles.bodyText}>
+                  Accept requests, log sessions, track earnings, and communicate with members — all
+                  from your phone. Compass is built mobile-first because your work happens in the
+                  field, not behind a desk.
+                </Text>
 
-          {/* Checklist */}
-          <View style={s.mobileFeaturesList}>
-            {MOBILE_FEATURES.map((feature) => (
-              <View key={feature} style={s.mobileFeatureRow}>
-                <CheckmarkCircle />
-                <Text style={s.mobileFeatureText}>{feature}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Phone mockup UI */}
-          <View style={s.phoneMockupOuter}>
-            {/* Notch */}
-            <View style={s.phoneMockupNotch} />
-            <View style={s.phoneMockupInner}>
-              {/* Status bar */}
-              <View style={s.phoneStatusBar}>
-                <Text style={s.phoneStatusTime}>9:41</Text>
-                <View style={s.phoneStatusIcons}>
-                  <View style={s.phoneStatusIcon} />
-                  <View style={s.phoneStatusIcon} />
-                  <View style={[s.phoneStatusIcon, s.phoneStatusIconGreen]} />
+                <View style={staticStyles.mobileFeaturesList}>
+                  {MOBILE_FEATURES.map((feature) => (
+                    <View key={feature} style={staticStyles.mobileFeatureRow}>
+                      <CheckmarkCircle />
+                      <Text style={staticStyles.mobileFeatureText}>{feature}</Text>
+                    </View>
+                  ))}
                 </View>
-              </View>
 
-              {/* App header */}
-              <View style={s.phoneAppHeader}>
-                <Smartphone size={18} color={colors.primary} />
-                <Text style={s.phoneAppTitle}>Compass</Text>
-              </View>
-
-              {/* Welcome line */}
-              <Text style={s.phoneWelcome}>Welcome back, Carlos</Text>
-              <Text style={s.phoneSubtitle}>You have 2 sessions today</Text>
-
-              {/* Session card */}
-              <View style={s.phoneSessionCard}>
-                <View style={s.phoneSessionCardTop}>
-                  <View>
-                    <Text style={s.phoneSessionTitle}>Housing Support</Text>
-                    <Text style={s.phoneSessionSub}>w/ Maria G.</Text>
-                  </View>
-                  <View style={s.phoneSessionTimeBadge}>
-                    <Text style={s.phoneSessionTime}>2:00 PM</Text>
-                  </View>
-                </View>
-                <Text style={s.phoneSessionDesc}>Rental assistance application review</Text>
+                <TouchableOpacity
+                  style={[staticStyles.sectionCta, { marginTop: spacing.md }]}
+                  onPress={handleWaitlistPress}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Get the App"
+                  accessibilityRole="button"
+                >
+                  <Text style={staticStyles.sectionCtaText}>Get the App</Text>
+                  <ArrowRight size={16} color="#FFFFFF" />
+                </TouchableOpacity>
               </View>
 
-              {/* Stats row */}
-              <View style={s.phoneStatsRow}>
-                <View style={s.phoneStatCard}>
-                  <Text style={s.phoneStatValue}>$176</Text>
-                  <Text style={s.phoneStatLabel}>This Week</Text>
-                </View>
-                <View style={s.phoneStatCard}>
-                  <Text style={s.phoneStatValue}>24</Text>
-                  <Text style={s.phoneStatLabel}>Sessions Done</Text>
-                </View>
+              {/* Right — phone mockup */}
+              <View
+                style={[
+                  staticStyles.mobileFirstMockupCol,
+                  { flex: isDesktop ? 1 : undefined, alignItems: 'center' },
+                ]}
+              >
+                <PhoneMockup />
               </View>
             </View>
-
-            {/* Bottom nav */}
-            <View style={s.phoneBottomNav}>
-              {['Home', 'Requests', 'Sessions', 'Earnings'].map((item) => (
-                <View key={item} style={s.phoneNavItem}>
-                  <View style={[s.phoneNavDot, item === 'Home' && s.phoneNavDotActive]} />
-                  <Text style={s.phoneNavLabel}>{item}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={s.mobileFirstCta}
-            onPress={handleWaitlistPress}
-            activeOpacity={0.85}
-            accessibilityLabel="Get the App"
-            accessibilityRole="button"
-          >
-            <Text style={s.mobileFirstCtaText}>Get the App</Text>
-            <ArrowRight size={16} color="#FFFFFF" />
-          </TouchableOpacity>
+          </ContentWrapper>
         </View>
 
         {/* ════════════════════════════════════════════════════════════════
             SECTION 7 — CTA SECTION
         ════════════════════════════════════════════════════════════════ */}
-        {/*
-          Layout strategy: Image fills the outer View via StyleSheet.absoluteFill.
-          The outer View must have an explicit height so absoluteFill has dimensions
-          to stretch into — we give it minHeight and let content push it taller.
-          ctaContent sits above the absolute layers via zIndex: 1.
-        */}
-        <View style={s.ctaSection}>
+        <View style={[staticStyles.ctaSection, { minHeight: isDesktop ? 520 : 400 }]}>
           <Image
             source={neighborhoodImage}
             style={StyleSheet.absoluteFill}
@@ -764,102 +1004,152 @@ export function LandingScreen(): React.JSX.Element {
             accessibilityLabel="Los Angeles neighborhood aerial view"
             resizeMode="cover"
           />
-          {/* Dark green overlay at 90% opacity */}
-          <View style={[StyleSheet.absoluteFill, s.ctaOverlay]} />
+          <View style={[StyleSheet.absoluteFill, staticStyles.ctaOverlay]} />
 
-          {/* Content */}
-          <View style={s.ctaContent}>
-            <Text style={s.ctaEyebrow}>Limited Early Access</Text>
-            <Text style={s.ctaHeading}>Ready to start earning as a CHW?</Text>
-            <Text style={s.ctaBody}>
-              We're opening Compass to CHWs in Los Angeles first. Secure your spot, set your availability, and start getting matched with members who need your help.
-            </Text>
-
-            <View style={s.ctaButtonsCol}>
-              <TouchableOpacity
-                style={s.ctaPrimaryButton}
-                onPress={handleLoginPress}
-                activeOpacity={0.85}
-                accessibilityLabel="Join as a CHW"
-                accessibilityRole="button"
+          <View style={{ zIndex: 1 }}>
+            <ContentWrapper
+              isDesktop={isDesktop}
+              style={[
+                staticStyles.ctaContent,
+                { paddingVertical: isDesktop ? 112 : spacing.xxl, paddingHorizontal: isDesktop ? 48 : px },
+              ]}
+            >
+              <Text style={staticStyles.ctaEyebrow}>Limited Early Access</Text>
+              <Text
+                style={[
+                  staticStyles.ctaHeading,
+                  { fontSize: isDesktop ? 56 : 32, lineHeight: isDesktop ? 60 : 38 },
+                ]}
               >
-                <Text style={s.ctaPrimaryButtonText}>Join as a CHW</Text>
-                <ArrowRight size={16} color="#FFFFFF" />
-              </TouchableOpacity>
+                Ready to start earning as a CHW?
+              </Text>
+              <Text style={staticStyles.ctaBody}>
+                We're opening Compass to CHWs in Los Angeles first. Secure your spot, set your
+                availability, and start getting matched with members who need your help.
+              </Text>
 
-              <TouchableOpacity
-                style={s.ctaSecondaryButton}
-                onPress={handleWaitlistPress}
-                activeOpacity={0.75}
-                accessibilityLabel="I'm a Community Member"
-                accessibilityRole="button"
+              <View
+                style={[
+                  staticStyles.ctaButtons,
+                  {
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    gap: isDesktop ? 16 : 10,
+                    justifyContent: 'center',
+                    marginTop: spacing.md,
+                  },
+                ]}
               >
-                <Text style={s.ctaSecondaryButtonText}>I'm a Community Member</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={staticStyles.ctaOutlineButton}
+                  onPress={handleLoginPress}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Join as a CHW"
+                  accessibilityRole="button"
+                >
+                  <Text style={staticStyles.ctaOutlineButtonText}>Join as a CHW</Text>
+                  <ArrowRight size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={staticStyles.ctaOutlineButtonSecondary}
+                  onPress={handleWaitlistPress}
+                  activeOpacity={0.75}
+                  accessibilityLabel="I'm a Community Member"
+                  accessibilityRole="button"
+                >
+                  <Text style={staticStyles.ctaOutlineButtonSecondaryText}>
+                    I'm a Community Member
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ContentWrapper>
           </View>
         </View>
 
         {/* ════════════════════════════════════════════════════════════════
             SECTION 8 — FOOTER
         ════════════════════════════════════════════════════════════════ */}
-        <View style={s.footer}>
-          {/* Logo row */}
-          <View style={s.footerLogoRow}>
-            <Image
-              source={compassIcon}
-              style={s.footerLogo}
-              accessibilityIgnoresInvertColors
-            />
-            <Text style={s.footerWordmark}>
-              Compass<Text style={s.footerWordmarkAccent}>CHW</Text>
-            </Text>
-          </View>
+        <View style={staticStyles.footer}>
+          <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
+            <View
+              style={[
+                staticStyles.footerTopRow,
+                {
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  gap: isDesktop ? 80 : spacing.xl,
+                  paddingTop: sectionPy,
+                  paddingBottom: isDesktop ? 56 : spacing.xxl,
+                  alignItems: isDesktop ? 'flex-start' : 'stretch',
+                },
+              ]}
+            >
+              {/* Column 1 — brand */}
+              <View style={[staticStyles.footerBrandCol, { flex: isDesktop ? 1.5 : undefined }]}>
+                <View style={staticStyles.footerLogoRow}>
+                  <Image
+                    source={compassIcon}
+                    style={staticStyles.footerLogo}
+                    accessibilityIgnoresInvertColors
+                  />
+                  <Text style={staticStyles.footerWordmark}>
+                    Compass<Text style={staticStyles.footerWordmarkAccent}>CHW</Text>
+                  </Text>
+                </View>
+                <Text style={staticStyles.footerTagline}>
+                  The marketplace connecting Community Health Workers with the neighbors who need them.
+                </Text>
+              </View>
 
-          <Text style={s.footerTagline}>
-            The marketplace connecting Community Health Workers with the neighbors who need them.
-          </Text>
+              {/* Link columns */}
+              {FOOTER_COLUMNS.map((col) => (
+                <View key={col.heading} style={[staticStyles.footerColumn, { flex: isDesktop ? 1 : undefined }]}>
+                  <Text style={staticStyles.footerColumnHeading}>{col.heading}</Text>
+                  {col.links.map((link) => (
+                    <TouchableOpacity
+                      key={link}
+                      accessibilityRole="link"
+                      accessibilityLabel={link}
+                      hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+                    >
+                      <Text style={staticStyles.footerLink}>{link}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </View>
 
-          {/* Link columns — 3 columns side by side */}
-          <View style={s.footerColumnsRow}>
-            {FOOTER_COLUMNS.map((col) => (
-              <View key={col.heading} style={s.footerColumn}>
-                <Text style={s.footerColumnHeading}>{col.heading}</Text>
-                {col.links.map((link) => (
+            <View style={staticStyles.footerDivider} />
+
+            {/* Bottom row */}
+            <View
+              style={[
+                staticStyles.footerBottomRow,
+                {
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  justifyContent: isDesktop ? 'space-between' : 'flex-start',
+                  paddingVertical: spacing.xl,
+                  gap: spacing.md,
+                },
+              ]}
+            >
+              <Text style={staticStyles.footerCopyright}>
+                © {new Date().getFullYear()} Compass CHW. All rights reserved.
+              </Text>
+              <View style={staticStyles.footerSocialRow}>
+                {['Twitter', 'LinkedIn', 'Instagram'].map((network) => (
                   <TouchableOpacity
-                    key={link}
+                    key={network}
+                    onPress={() => Linking.openURL('https://compasschw.com').catch(() => null)}
                     accessibilityRole="link"
-                    accessibilityLabel={link}
-                    hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+                    accessibilityLabel={`CompassCHW on ${network}`}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={s.footerLink}>{link}</Text>
+                    <Text style={staticStyles.footerSocialLink}>{network}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            ))}
-          </View>
-
-          <View style={s.footerDivider} />
-
-          {/* Copyright + social */}
-          <View style={s.footerBottomRow}>
-            <Text style={s.footerCopyright}>
-              © {new Date().getFullYear()} Compass CHW. All rights reserved.
-            </Text>
-            <View style={s.footerSocialRow}>
-              {['Twitter', 'LinkedIn', 'Instagram'].map((network) => (
-                <TouchableOpacity
-                  key={network}
-                  onPress={() => Linking.openURL('https://compasschw.com').catch(() => null)}
-                  accessibilityRole="link"
-                  accessibilityLabel={`CompassCHW on ${network}`}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={s.footerSocialLink}>{network}</Text>
-                </TouchableOpacity>
-              ))}
             </View>
-          </View>
+          </ContentWrapper>
         </View>
 
       </ScrollView>
@@ -867,24 +1157,130 @@ export function LandingScreen(): React.JSX.Element {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── ServiceCardItem ─────────────────────────────────────────────────────────
 
-const SERVICE_CARD_WIDTH = '48%' as const;
+/**
+ * A single service card. Computes its own width from the container geometry
+ * so the grid fills correctly on both desktop (5 col) and mobile (2 col).
+ */
+function ServiceCardItem({
+  card,
+  isDesktop,
+  gridGap,
+  cardCount,
+  containerWidth,
+}: {
+  card: ServiceCard;
+  isDesktop: boolean;
+  gridGap: number;
+  cardCount: number;
+  containerWidth: number;
+}): React.JSX.Element {
+  const cardWidth = (containerWidth - gridGap * (cardCount - 1)) / cardCount;
 
-const s = StyleSheet.create({
+  return (
+    <View
+      style={[
+        staticStyles.serviceCard,
+        { width: cardWidth },
+      ]}
+    >
+      <View style={staticStyles.serviceCardIconWrap}>
+        <card.icon size={isDesktop ? 26 : 22} color={colors.primary} />
+      </View>
+      <Text style={[staticStyles.serviceCardTitle, { fontSize: isDesktop ? 17 : 15 }]}>
+        {card.title}
+      </Text>
+      <Text style={staticStyles.serviceCardDescription}>{card.description}</Text>
+    </View>
+  );
+}
+
+// ─── PhoneMockup ─────────────────────────────────────────────────────────────
+
+/**
+ * Decorative phone UI mockup used in the Mobile First section.
+ */
+function PhoneMockup(): React.JSX.Element {
+  return (
+    <View style={staticStyles.phoneMockupOuter}>
+      <View style={staticStyles.phoneMockupNotch} />
+      <View style={staticStyles.phoneMockupInner}>
+        {/* Status bar */}
+        <View style={staticStyles.phoneStatusBar}>
+          <Text style={staticStyles.phoneStatusTime}>9:41</Text>
+          <View style={staticStyles.phoneStatusIcons}>
+            <View style={staticStyles.phoneStatusIcon} />
+            <View style={staticStyles.phoneStatusIcon} />
+            <View style={[staticStyles.phoneStatusIcon, staticStyles.phoneStatusIconGreen]} />
+          </View>
+        </View>
+
+        {/* App header */}
+        <View style={staticStyles.phoneAppHeader}>
+          <Smartphone size={18} color={colors.primary} />
+          <Text style={staticStyles.phoneAppTitle}>Compass</Text>
+        </View>
+
+        <Text style={staticStyles.phoneWelcome}>Welcome back, Carlos</Text>
+        <Text style={staticStyles.phoneSubtitle}>You have 2 sessions today</Text>
+
+        {/* Session card */}
+        <View style={staticStyles.phoneSessionCard}>
+          <View style={staticStyles.phoneSessionCardTop}>
+            <View>
+              <Text style={staticStyles.phoneSessionTitle}>Housing Support</Text>
+              <Text style={staticStyles.phoneSessionSub}>w/ Maria G.</Text>
+            </View>
+            <View style={staticStyles.phoneSessionTimeBadge}>
+              <Text style={staticStyles.phoneSessionTime}>2:00 PM</Text>
+            </View>
+          </View>
+          <Text style={staticStyles.phoneSessionDesc}>Rental assistance application review</Text>
+        </View>
+
+        {/* Stats row */}
+        <View style={staticStyles.phoneStatsRow}>
+          <View style={staticStyles.phoneStatCard}>
+            <Text style={staticStyles.phoneStatValue}>$176</Text>
+            <Text style={staticStyles.phoneStatLabel}>This Week</Text>
+          </View>
+          <View style={staticStyles.phoneStatCard}>
+            <Text style={staticStyles.phoneStatValue}>24</Text>
+            <Text style={staticStyles.phoneStatLabel}>Sessions Done</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Bottom nav */}
+      <View style={staticStyles.phoneBottomNav}>
+        {['Home', 'Requests', 'Sessions', 'Earnings'].map((item) => (
+          <View key={item} style={staticStyles.phoneNavItem}>
+            <View style={[staticStyles.phoneNavDot, item === 'Home' && staticStyles.phoneNavDotActive]} />
+            <Text style={staticStyles.phoneNavLabel}>{item}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── Static styles (not layout-dependent) ────────────────────────────────────
+
+/**
+ * All styles that don't change based on viewport width live here.
+ * Responsive overrides are applied inline via `isDesktop` flags in the JSX.
+ */
+const staticStyles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
 
-  // ── Navbar ────────────────────────────────────────────────────────────────
+  // ── Navbar ──────────────────────────────────────────────────────────────────
   navbar: {
     height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -898,6 +1294,16 @@ const s = StyleSheet.create({
       },
     }),
     zIndex: 10,
+    justifyContent: 'center',
+  },
+  navbarDesktop: {
+    height: 72,
+  },
+  navbarInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
   },
   navbarLeft: {
     flexDirection: 'row',
@@ -931,18 +1337,13 @@ const s = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // ── Scroll ────────────────────────────────────────────────────────────────
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 0,
-  },
+  // ── Scroll ──────────────────────────────────────────────────────────────────
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 0 },
 
-  // ── Toggle ────────────────────────────────────────────────────────────────
+  // ── Toggle ──────────────────────────────────────────────────────────────────
   toggleContainer: {
     alignItems: 'center',
-    paddingTop: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
   togglePill: {
@@ -952,7 +1353,6 @@ const s = StyleSheet.create({
     padding: 4,
     borderWidth: 1,
     borderColor: colors.border,
-    // Card-level shadow matching Lovable `shadow-card`
     ...Platform.select({
       ios: {
         shadowColor: colors.foreground,
@@ -970,7 +1370,6 @@ const s = StyleSheet.create({
   },
   toggleTabActive: {
     backgroundColor: colors.primary,
-    // Elevated shadow on active tab
     ...Platform.select({
       ios: {
         shadowColor: colors.primary,
@@ -990,12 +1389,82 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
-  heroSection: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxl,
+  // ── Hero ────────────────────────────────────────────────────────────────────
+  heroOuter: {
+    backgroundColor: colors.background,
+  },
+  heroContent: {},
+  heroColumns: {},
+  heroTextCol: {
     gap: spacing.md,
+  },
+  heroImageCol: {},
+  heroImageWrap: {
+    position: 'relative',
+    borderRadius: radii.xxl,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.foreground,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.18,
+        shadowRadius: 32,
+      },
+      android: { elevation: 12 },
+    }),
+  },
+  heroImage: {
+    width: '100%',
+    resizeMode: 'cover',
+  },
+  // Floating stats card at bottom of hero image
+  heroStatsCard: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(61,90,62,0.96)',
+    borderRadius: radii.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  heroStatItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  heroStatLabel: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 9,
+    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  heroStatValue: {
+    fontFamily: fonts.display,
+    fontSize: 18,
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginHorizontal: 4,
   },
   heroBadge: {
     flexDirection: 'row',
@@ -1016,9 +1485,6 @@ const s = StyleSheet.create({
   },
   heroHeadline: {
     fontFamily: fonts.display,
-    fontSize: 36,
-    lineHeight: 42,
-    letterSpacing: -1,
     color: colors.foreground,
   },
   heroHeadlineAccent: {
@@ -1026,19 +1492,13 @@ const s = StyleSheet.create({
   },
   heroDescription: {
     fontFamily: fonts.body,
-    fontSize: 16,
-    lineHeight: 26,
     color: colors.mutedForeground,
   },
   heroDescriptionBold: {
     fontFamily: fonts.bodyBold,
     color: colors.foreground,
   },
-  // Full-width stacked buttons (flex-col on mobile in Lovable)
-  heroButtonsCol: {
-    gap: spacing.sm + 2,
-    marginTop: spacing.xs,
-  },
+  heroButtons: {},
   heroPrimaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1048,6 +1508,10 @@ const s = StyleSheet.create({
     borderRadius: radii.md,
     paddingVertical: 14,
     paddingHorizontal: spacing.md,
+  },
+  heroPrimaryButtonDesktop: {
+    paddingHorizontal: spacing.xl,
+    alignSelf: 'flex-start',
   },
   heroPrimaryButtonText: {
     fontFamily: fonts.bodySemibold,
@@ -1063,17 +1527,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heroSecondaryButtonDesktop: {
+    paddingHorizontal: spacing.xl,
+    alignSelf: 'flex-start',
+  },
   heroSecondaryButtonText: {
     fontFamily: fonts.bodySemibold,
     fontSize: 15,
     color: colors.primary,
   },
-  // Trust badges — card style (bg-card + border + shadow-card in Lovable)
   trustBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.xs,
   },
   trustBadge: {
     flexDirection: 'row',
@@ -1101,12 +1567,12 @@ const s = StyleSheet.create({
     color: colors.foreground,
   },
 
-  // ── Client Slider ─────────────────────────────────────────────────────────
+  // ── Client Slider ────────────────────────────────────────────────────────────
   clientSliderSection: {
-    paddingVertical: spacing.xxl,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: spacing.sm,
+    backgroundColor: colors.background,
   },
   clientSliderEyebrow: {
     fontFamily: fonts.bodySemibold,
@@ -1119,16 +1585,13 @@ const s = StyleSheet.create({
   },
   clientSliderHeading: {
     fontFamily: fonts.display,
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
     color: colors.foreground,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   clientCardsScroll: {
-    paddingHorizontal: spacing.lg,
     gap: spacing.lg,
     paddingVertical: spacing.xs,
   },
@@ -1172,46 +1635,12 @@ const s = StyleSheet.create({
     color: colors.foreground,
   },
 
-  // ── Services ──────────────────────────────────────────────────────────────
+  // ── Services ─────────────────────────────────────────────────────────────────
   servicesSection: {
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
     backgroundColor: colors.background,
   },
-  sectionEyebrow: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 11,
-    letterSpacing: 1.6,
-    color: colors.primary,
-    textTransform: 'uppercase',
-  },
-  sectionHeading: {
-    fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.5,
-    color: colors.foreground,
-  },
-  sectionHeadingBold: {
-    fontFamily: fonts.display,
-    color: colors.foreground,
-  },
-  servicesSubheading: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 23,
-    color: colors.mutedForeground,
-    marginBottom: spacing.xs,
-  },
-  // 2-column grid — matching `grid-cols-2` on mobile in Lovable
-  serviceCardsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm + 2,
-  },
+  serviceCardsGrid: {},
   serviceCard: {
-    width: SERVICE_CARD_WIDTH,
     backgroundColor: colors.card,
     borderRadius: radii.xl,
     padding: spacing.md + 4,
@@ -1238,7 +1667,6 @@ const s = StyleSheet.create({
   },
   serviceCardTitle: {
     fontFamily: fonts.display,
-    fontSize: 15,
     color: colors.foreground,
     letterSpacing: -0.2,
   },
@@ -1249,19 +1677,16 @@ const s = StyleSheet.create({
     color: colors.mutedForeground,
   },
 
-  // Stats bar — bg-primary rounded-2xl (Lovable uses primary which = compassGreen #3D5A3E)
+  // Stats bar — dark primary bar below service cards
   statsBar: {
     backgroundColor: colors.primary,
     borderRadius: radii.xl,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     overflow: 'hidden',
-    marginTop: spacing.md,
   },
   statCell: {
-    width: '50%',
     padding: spacing.lg,
     gap: spacing.xs,
+    alignItems: 'center',
   },
   statCellBorderRight: {
     borderRightWidth: StyleSheet.hairlineWidth,
@@ -1273,26 +1698,21 @@ const s = StyleSheet.create({
   },
   statValue: {
     fontFamily: fonts.display,
-    fontSize: 36,
-    lineHeight: 40,
     color: '#FFFFFF',
     letterSpacing: -1,
     textAlign: 'center',
   },
   statLabel: {
     fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     color: 'rgba(255,255,255,0.65)',
     textAlign: 'center',
   },
 
-  // ── How It Works ──────────────────────────────────────────────────────────
+  // ── How It Works ─────────────────────────────────────────────────────────────
   howItWorksSection: {
     backgroundColor: colors.compassDark,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
   },
   howEyebrow: {
     fontFamily: fonts.bodySemibold,
@@ -1301,27 +1721,32 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.55)',
     textTransform: 'uppercase',
     textAlign: 'center',
+    marginBottom: spacing.sm,
   },
   howHeading: {
     fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.5,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: spacing.md,
+    letterSpacing: -1,
   },
-  howHeadingBold: {
-    fontFamily: fonts.display,
-    color: '#FFFFFF',
+  howHeadingHighlight: {
+    color: colors.secondary,
   },
-  stepsContainer: {
-    gap: spacing.xxl,
+  // Horizontal connecting line between steps (desktop only)
+  stepsConnectingLine: {
+    position: 'absolute',
+    top: 28, // center of the 56px icon circle
+    left: '16.67%', // ~1/6 of container (after first icon center)
+    right: '16.67%',
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    zIndex: 0,
   },
-  // Each step: centered icon circle, title, description (matching Lovable's text-center layout)
+  stepsRow: {},
   stepItem: {
     alignItems: 'center',
     gap: spacing.md,
+    zIndex: 1,
   },
   stepIconCircle: {
     width: 56,
@@ -1330,7 +1755,6 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    // Glow shadow matching `shadow-glow` in Lovable
     ...Platform.select({
       ios: {
         shadowColor: '#FFFFFF',
@@ -1343,7 +1767,6 @@ const s = StyleSheet.create({
   },
   stepTitle: {
     fontFamily: fonts.display,
-    fontSize: 18,
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -0.3,
@@ -1357,19 +1780,19 @@ const s = StyleSheet.create({
     maxWidth: 280,
   },
 
-  // ── For CHWs ──────────────────────────────────────────────────────────────
+  // ── For CHWs ──────────────────────────────────────────────────────────────────
   forChwsSection: {
     backgroundColor: colors.background,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
+  },
+  twoColRow: {},
+  forChwsImageCol: {},
+  forChwsTextCol: {
     gap: spacing.md,
   },
   forChwsImageWrap: {
     position: 'relative',
     borderRadius: radii.xxl,
     overflow: 'hidden',
-    marginBottom: spacing.sm,
-    // Elevated shadow matching Lovable `shadow-elevated`
     ...Platform.select({
       ios: {
         shadowColor: colors.foreground,
@@ -1382,7 +1805,6 @@ const s = StyleSheet.create({
   },
   forChwsImage: {
     width: '100%',
-    height: 320,
     resizeMode: 'cover',
   },
   forChwsImageOverlay: {
@@ -1391,7 +1813,6 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     height: 200,
-    // Gradient simulation: bg-gradient-to-t from compass-dark/50
     backgroundColor: 'rgba(20,43,26,0.45)',
   },
   earningsCard: {
@@ -1428,114 +1849,15 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: colors.secondary,
   },
-  forChwsEyebrow: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 11,
-    letterSpacing: 1.6,
-    color: colors.primary,
-    textTransform: 'uppercase',
-  },
-  forChwsHeading: {
-    fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.5,
-    color: colors.foreground,
-  },
-  forChwsHeadingAccent: {
-    color: colors.secondary,
-  },
-  forChwsBody: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 24,
-    color: colors.mutedForeground,
-  },
-  // 2-column grid of benefit items
-  benefitsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  benefitItem: {
-    width: '47%',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'flex-start',
-  },
-  benefitIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    backgroundColor: `${colors.primary}1A`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  benefitTextBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  benefitTitle: {
-    fontFamily: fonts.displaySemibold,
-    fontSize: 13,
-    color: colors.foreground,
-    lineHeight: 18,
-  },
-  benefitDescription: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.mutedForeground,
-  },
-  forChwsCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.lg,
-    alignSelf: 'flex-start',
-  },
-  forChwsCtaText: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
 
-  // ── Mobile First ──────────────────────────────────────────────────────────
+  // ── Mobile First ─────────────────────────────────────────────────────────────
   mobileFirstSection: {
     backgroundColor: colors.compassNude,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
+  },
+  mobileFirstTextCol: {
     gap: spacing.md,
   },
-  mobileFirstEyebrow: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 11,
-    letterSpacing: 1.6,
-    color: colors.primary,
-    textTransform: 'uppercase',
-  },
-  mobileFirstHeading: {
-    fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.5,
-    color: colors.foreground,
-  },
-  mobileFirstHeadingAccent: {
-    color: colors.secondary,
-  },
-  mobileFirstBody: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 24,
-    color: colors.mutedForeground,
-  },
+  mobileFirstMockupCol: {},
   mobileFeaturesList: {
     gap: spacing.md,
   },
@@ -1550,15 +1872,14 @@ const s = StyleSheet.create({
     color: colors.foreground,
     flex: 1,
   },
-  // Phone mockup — dark rounded rectangle with inner card content
+
+  // ── Phone mockup ──────────────────────────────────────────────────────────────
   phoneMockupOuter: {
     width: 260,
-    alignSelf: 'center',
     backgroundColor: colors.compassDark,
     borderRadius: 44,
     padding: 12,
     marginVertical: spacing.xl,
-    // shadow-elevated
     ...Platform.select({
       ios: {
         shadowColor: colors.foreground,
@@ -1727,44 +2048,18 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: colors.mutedForeground,
   },
-  mobileFirstCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.lg,
-    alignSelf: 'flex-start',
-  },
-  mobileFirstCtaText: {
-    fontFamily: fonts.bodySemibold,
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
 
-  // ── CTA Section ───────────────────────────────────────────────────────────
+  // ── CTA Section ───────────────────────────────────────────────────────────────
   ctaSection: {
     position: 'relative',
     overflow: 'hidden',
-    // Explicit minHeight so StyleSheet.absoluteFill has dimensions to stretch into
-    minHeight: 400,
   },
   ctaOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    // bg-primary/90 = #3D5A3E at 90% opacity
     backgroundColor: 'rgba(61,90,62,0.92)',
   },
   ctaContent: {
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
     gap: spacing.md,
-    zIndex: 1,
+    alignItems: 'center',
   },
   ctaEyebrow: {
     fontFamily: fonts.bodySemibold,
@@ -1776,61 +2071,60 @@ const s = StyleSheet.create({
   },
   ctaHeading: {
     fontFamily: fonts.display,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
     color: '#FFFFFF',
     textAlign: 'center',
+    maxWidth: 680,
   },
   ctaBody: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 17,
+    lineHeight: 26,
     color: 'rgba(255,255,255,0.65)',
     textAlign: 'center',
+    maxWidth: 560,
   },
-  ctaButtonsCol: {
-    gap: spacing.sm + 2,
-    marginTop: spacing.xs,
+  ctaButtons: {
+    alignItems: 'center',
   },
-  ctaPrimaryButton: {
+  ctaOutlineButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: 'rgba(255,255,255,0.5)',
     borderRadius: radii.md,
     paddingVertical: 14,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
-  ctaPrimaryButtonText: {
+  ctaOutlineButtonText: {
     fontFamily: fonts.bodySemibold,
     fontSize: 15,
     color: '#FFFFFF',
   },
-  ctaSecondaryButton: {
+  ctaOutlineButtonSecondary: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.25)',
     borderRadius: radii.md,
     paddingVertical: 14,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ctaSecondaryButtonText: {
+  ctaOutlineButtonSecondaryText: {
     fontFamily: fonts.bodySemibold,
     fontSize: 15,
-    color: 'rgba(255,255,255,0.65)',
+    color: 'rgba(255,255,255,0.7)',
   },
 
-  // ── Footer ────────────────────────────────────────────────────────────────
+  // ── Footer ────────────────────────────────────────────────────────────────────
   footer: {
     backgroundColor: colors.compassDark,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xl,
-    gap: spacing.xl,
+  },
+  footerTopRow: {},
+  footerBrandCol: {
+    gap: spacing.md,
   },
   footerLogoRow: {
     flexDirection: 'row',
@@ -1857,14 +2151,8 @@ const s = StyleSheet.create({
     lineHeight: 20,
     color: 'rgba(255,255,255,0.55)',
     maxWidth: 280,
-    marginTop: -spacing.md,
-  },
-  footerColumnsRow: {
-    flexDirection: 'row',
-    gap: spacing.lg,
   },
   footerColumn: {
-    flex: 1,
     gap: spacing.sm,
   },
   footerColumnHeading: {
@@ -1884,9 +2172,7 @@ const s = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  footerBottomRow: {
-    gap: spacing.sm,
-  },
+  footerBottomRow: {},
   footerCopyright: {
     fontFamily: fonts.body,
     fontSize: 12,
@@ -1894,11 +2180,128 @@ const s = StyleSheet.create({
   },
   footerSocialRow: {
     flexDirection: 'row',
-    gap: spacing.lg,
+    gap: spacing.xl,
   },
   footerSocialLink: {
     fontFamily: fonts.bodySemibold,
     fontSize: 12,
     color: 'rgba(255,255,255,0.45)',
+  },
+
+  // ── Shared typographic utilities ─────────────────────────────────────────────
+  eyebrowLabel: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 1.6,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  eyebrowCentered: {
+    textAlign: 'center',
+  },
+  sectionHeading: {
+    fontFamily: fonts.display,
+    color: colors.foreground,
+    letterSpacing: -1,
+    marginBottom: spacing.xs,
+  },
+  textCentered: {
+    textAlign: 'center',
+  },
+  sectionSubheading: {
+    fontFamily: fonts.body,
+    fontSize: 17,
+    lineHeight: 26,
+    color: colors.mutedForeground,
+  },
+  accentText: {
+    color: colors.secondary,
+  },
+  bodyText: {
+    fontFamily: fonts.body,
+    fontSize: 16,
+    lineHeight: 26,
+    color: colors.mutedForeground,
+  },
+
+  // ── Shared button styles ──────────────────────────────────────────────────────
+  sectionCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.xl,
+    alignSelf: 'flex-start',
+  },
+  sectionCtaText: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+
+  // ── Benefit cards ─────────────────────────────────────────────────────────────
+  benefitsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  benefitItem: {
+    width: '47%',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  benefitIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: `${colors.primary}1A`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  benefitTextBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  benefitTitle: {
+    fontFamily: fonts.displaySemibold,
+    fontSize: 13,
+    color: colors.foreground,
+    lineHeight: 18,
+  },
+  benefitDescription: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.mutedForeground,
+  },
+
+  // ── PulsingDot + CheckmarkCircle ─────────────────────────────────────────────
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.secondary,
+  },
+  checkmarkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  checkmarkText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: fonts.bodySemibold,
+    lineHeight: 18,
   },
 });
