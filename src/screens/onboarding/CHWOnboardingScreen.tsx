@@ -42,7 +42,9 @@ import {
 } from 'lucide-react-native';
 
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { typography, fonts } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
+import { radii, spacing } from '../../theme/spacing';
 import { useAuth } from '../../context/AuthContext';
 import type { Vertical } from '../../data/mock';
 
@@ -266,23 +268,23 @@ const stepStyles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   dotLabel: {
+    fontFamily: fonts.displaySemibold,
     fontSize: 12,
-    fontWeight: '700',
     color: colors.mutedForeground,
   },
   dotLabelCurrent: {
     color: '#FFFFFF',
   },
   label: {
+    fontFamily: fonts.body,
     fontSize: 9,
-    fontWeight: '500',
     color: colors.mutedForeground,
     marginTop: 4,
     textAlign: 'center',
   },
   labelCurrent: {
+    fontFamily: fonts.bodySemibold,
     color: colors.secondary,
-    fontWeight: '700',
   },
   labelCompleted: {
     color: colors.primary,
@@ -336,17 +338,21 @@ const formStyles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    ...typography.label,
-    color: colors.foreground,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.mutedForeground,
   },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    backgroundColor: colors.card,
-    paddingHorizontal: 14,
+    borderRadius: radii.md,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    ...typography.bodyMd,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.foreground,
   },
 });
@@ -1055,63 +1061,75 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   logoMarkText: {
-    ...typography.displaySm,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 22,
     color: '#FFFFFF',
   },
   wordmark: {
-    ...typography.displaySm,
+    fontFamily: fonts.display,
+    fontSize: 22,
     color: colors.foreground,
+    letterSpacing: -0.5,
     lineHeight: 28,
   },
   wordmarkAccent: {
     color: colors.secondary,
   },
   logoCaption: {
-    ...typography.label,
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.mutedForeground,
     marginTop: 1,
   },
 
   // Card
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+    ...shadows.elevated,
   },
   cardAccentBar: {
-    height: 5,
+    height: 3,
     backgroundColor: colors.primary,
   },
   cardBody: {
-    padding: 24,
+    padding: spacing.xl,
   },
 
   // Step content
   stepTitle: {
-    ...typography.displaySm,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 22,
     color: colors.foreground,
     marginBottom: 6,
   },
   stepSubtitle: {
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.mutedForeground,
     marginBottom: 4,
     lineHeight: 20,
   },
   sectionLabel: {
-    ...typography.label,
-    color: colors.foreground,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.mutedForeground,
   },
   hint: {
-    ...typography.label,
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.mutedForeground,
     marginTop: 6,
     textAlign: 'center',
   },
   disclaimer: {
-    ...typography.label,
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.mutedForeground,
     lineHeight: 18,
     marginTop: 12,
@@ -1128,20 +1146,20 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     padding: 14,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
   },
   specCardSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '08',
+    backgroundColor: `${colors.primary}08`,
   },
   specIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: radii.sm + 2,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1151,25 +1169,26 @@ const s = StyleSheet.create({
     gap: 2,
   },
   specLabel: {
-    ...typography.bodySm,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
+    fontSize: 14,
     color: colors.foreground,
   },
   specLabelSelected: {
     color: colors.primary,
   },
   specDesc: {
-    ...typography.label,
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.mutedForeground,
     lineHeight: 16,
   },
   checkCircle: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: radii.full,
     borderWidth: 2,
     borderColor: colors.border,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1187,13 +1206,15 @@ const s = StyleSheet.create({
     marginTop: 12,
   },
   pill: {
-    backgroundColor: colors.primary + '18',
-    borderRadius: 100,
+    backgroundColor: `${colors.primary}18`,
+    borderRadius: radii.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   pillText: {
-    ...typography.label,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 0.5,
     color: colors.primary,
   },
 
@@ -1209,14 +1230,14 @@ const s = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: radii.sm + 2,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
   },
   langChipSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '08',
+    backgroundColor: `${colors.primary}08`,
   },
   langCheck: {
     width: 14,
@@ -1227,12 +1248,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   langChipText: {
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.foreground,
   },
   langChipTextSelected: {
+    fontFamily: fonts.bodySemibold,
     color: colors.primary,
-    fontWeight: '600',
   },
 
   // Bio
@@ -1241,7 +1263,8 @@ const s = StyleSheet.create({
     paddingTop: 14,
   },
   charCounter: {
-    ...typography.label,
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.mutedForeground,
     textAlign: 'right',
     marginTop: 4,
@@ -1251,9 +1274,9 @@ const s = StyleSheet.create({
   credCard: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     padding: 16,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     marginBottom: 12,
   },
   credCardHeader: {
@@ -1265,18 +1288,19 @@ const s = StyleSheet.create({
   credIcon: {
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   credCardTitle: {
-    ...typography.bodyMd,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemibold,
+    fontSize: 15,
     color: colors.foreground,
   },
   credCardSubtitle: {
-    ...typography.label,
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.mutedForeground,
     marginTop: 1,
   },
@@ -1288,13 +1312,13 @@ const s = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary,
     borderStyle: 'dashed',
-    borderRadius: 12,
+    borderRadius: radii.md,
     paddingVertical: 14,
     backgroundColor: colors.background,
   },
   uploadButtonText: {
-    ...typography.bodySm,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
+    fontSize: 14,
     color: colors.primary,
   },
 
@@ -1307,22 +1331,23 @@ const s = StyleSheet.create({
   pickerOption: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radii.sm,
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: colors.background,
   },
   pickerOptionSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '18',
+    backgroundColor: `${colors.primary}18`,
   },
   pickerOptionText: {
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.mutedForeground,
   },
   pickerOptionTextSelected: {
+    fontFamily: fonts.bodySemibold,
     color: colors.primary,
-    fontWeight: '600',
   },
 
   // Background check consent
@@ -1332,13 +1357,13 @@ const s = StyleSheet.create({
     gap: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: radii.md - 2,
     padding: 12,
     backgroundColor: colors.background,
   },
   consentRowSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primary + '08',
+    backgroundColor: `${colors.primary}08`,
   },
   checkbox: {
     width: 16,
@@ -1346,7 +1371,7 @@ const s = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 2,
     borderColor: colors.border,
-    backgroundColor: colors.card,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -1358,7 +1383,8 @@ const s = StyleSheet.create({
   },
   consentText: {
     flex: 1,
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.foreground,
     lineHeight: 20,
   },
@@ -1367,20 +1393,22 @@ const s = StyleSheet.create({
   successIconWrap: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary + '18',
+    borderRadius: radii.full,
+    backgroundColor: `${colors.primary}18`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
   successTitle: {
-    ...typography.displaySm,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 22,
     color: colors.foreground,
     textAlign: 'center',
     marginBottom: 8,
   },
   successBody: {
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.mutedForeground,
     textAlign: 'center',
     lineHeight: 20,
@@ -1390,7 +1418,7 @@ const s = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radii.md,
     padding: 16,
     backgroundColor: colors.background,
     marginTop: 20,
@@ -1398,9 +1426,11 @@ const s = StyleSheet.create({
     gap: 10,
   },
   nextStepsTitle: {
-    ...typography.label,
-    color: colors.mutedForeground,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 1,
     textTransform: 'uppercase',
+    color: colors.mutedForeground,
     marginBottom: 4,
   },
   nextStepRow: {
@@ -1411,21 +1441,22 @@ const s = StyleSheet.create({
   nextStepNum: {
     width: 20,
     height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.primary + '18',
+    borderRadius: radii.full,
+    backgroundColor: `${colors.primary}18`,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     marginTop: 1,
   },
   nextStepNumText: {
+    fontFamily: fonts.displaySemibold,
     fontSize: 10,
-    fontWeight: '700',
     color: colors.primary,
   },
   nextStepText: {
     flex: 1,
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.mutedForeground,
     lineHeight: 18,
   },
@@ -1451,15 +1482,16 @@ const s = StyleSheet.create({
     opacity: 0.3,
   },
   backButtonText: {
-    ...typography.bodySm,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
+    fontSize: 14,
     color: colors.mutedForeground,
   },
   backButtonTextDisabled: {
     color: colors.border,
   },
   stepCounter: {
-    ...typography.label,
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.mutedForeground,
   },
   nextButton: {
@@ -1469,7 +1501,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: 18,
     paddingVertical: 11,
-    borderRadius: 12,
+    borderRadius: radii.md,
     minWidth: 100,
     justifyContent: 'center',
   },
@@ -1477,8 +1509,8 @@ const s = StyleSheet.create({
     opacity: 0.35,
   },
   nextButtonText: {
-    ...typography.bodySm,
-    fontWeight: '700',
+    fontFamily: fonts.display,
+    fontSize: 14,
     color: '#FFFFFF',
   },
 
@@ -1489,13 +1521,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
     width: '100%',
   },
   submitButtonText: {
-    ...typography.bodyMd,
-    fontWeight: '700',
+    fontFamily: fonts.display,
+    fontSize: 16,
     color: '#FFFFFF',
   },
 });

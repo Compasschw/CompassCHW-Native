@@ -1,9 +1,13 @@
 /**
  * WaitlistScreen — join the CompassCHW waitlist.
+ * Styled to match the Lovable /waitlist page.
  *
- * Collects first name, last name, email, and role.
- * On submit, calls submitWaitlist API with AsyncStorage fallback
- * if the network request fails.
+ * Layout (mobile-first, vertical stack):
+ *   1. Logo wordmark
+ *   2. Hero heading + subtitle
+ *   3. Trust badges (3 pills: HIPAA, Medi-Cal, No Cost)
+ *   4. Form card (white, gradient top bar, shadow-elevated)
+ *   5. Success state with CheckCircle confirmation
  */
 
 import React, { useState, useCallback } from 'react';
@@ -21,11 +25,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CheckCircle } from 'lucide-react-native';
+import { Shield, CheckCircle, Star } from 'lucide-react-native';
 
 import { submitWaitlist, type WaitlistPayload } from '../../api/waitlist';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { typography, fonts } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
+import { radii, spacing } from '../../theme/spacing';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../../navigation/AppNavigator';
 
@@ -39,20 +45,20 @@ type WaitlistRole = 'chw' | 'member' | '';
 
 const WAITLIST_STORAGE_KEY = 'compass_waitlist_submission';
 
-// ─── Trust badge data ─────────────────────────────────────────────────────────
+// ─── Trust badges ─────────────────────────────────────────────────────────────
 
 interface TrustBadge {
+  icon: React.ComponentType<{ size: number; color: string }>;
   label: string;
-  sublabel: string;
 }
 
 const TRUST_BADGES: TrustBadge[] = [
-  { label: 'HIPAA', sublabel: 'Compliant' },
-  { label: 'Medi-Cal', sublabel: 'Integrated' },
-  { label: 'No Cost', sublabel: 'For Members' },
+  { icon: Shield, label: 'HIPAA Compliant' },
+  { icon: CheckCircle, label: 'Medi-Cal Accepted' },
+  { icon: Star, label: 'No Cost to Members' },
 ];
 
-// ─── Role option ──────────────────────────────────────────────────────────────
+// ─── Role options ─────────────────────────────────────────────────────────────
 
 interface RoleOption {
   value: WaitlistRole;
@@ -60,16 +66,16 @@ interface RoleOption {
 }
 
 const ROLE_OPTIONS: RoleOption[] = [
-  { value: 'chw', label: 'Community Health Worker (CHW)' },
-  { value: 'member', label: 'Community Member' },
+  { value: 'chw', label: 'CHW — I want to provide care' },
+  { value: 'member', label: 'Member — I need support' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
  * WaitlistScreen displays the waitlist signup form.
- * On success, shows a confirmation state.
- * On API failure, persists the submission to AsyncStorage as a fallback.
+ * On success, transitions to an inline confirmation state.
+ * On API failure, persists to AsyncStorage so the lead is not lost.
  */
 export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
   const [firstName, setFirstName] = useState('');
@@ -116,13 +122,14 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
       await submitWaitlist(payload);
       setIsSuccess(true);
     } catch {
-      // API failed — persist locally as fallback so we don't lose the lead.
+      // API failed — persist locally so the lead is not lost.
       try {
         const existingRaw = await AsyncStorage.getItem(WAITLIST_STORAGE_KEY);
-        const existing: WaitlistPayload[] = existingRaw ? (JSON.parse(existingRaw) as WaitlistPayload[]) : [];
+        const existing: WaitlistPayload[] = existingRaw
+          ? (JSON.parse(existingRaw) as WaitlistPayload[])
+          : [];
         existing.push(payload);
         await AsyncStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(existing));
-        // Show success regardless — user is on the list locally.
         setIsSuccess(true);
       } catch {
         setError('Unable to submit right now. Please check your connection and try again.');
@@ -136,99 +143,121 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
 
   if (isSuccess) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.successContainer}>
-          <View style={styles.successIconWrapper}>
-            <CheckCircle size={48} color={colors.primary} />
+      <SafeAreaView style={s.safeArea}>
+        <View style={s.successFullScreen}>
+          <View style={[s.successCard, shadows.elevated]}>
+            {/* Gradient top bar */}
+            <View style={s.cardGradientBar}>
+              <View style={s.cardGradientLeft} />
+              <View style={s.cardGradientRight} />
+            </View>
+
+            <View style={s.successCardBody}>
+              <View style={s.successIconWrapper}>
+                <CheckCircle size={40} color={colors.primary} />
+              </View>
+              <Text style={s.successTitle}>You're on the list!</Text>
+              <Text style={s.successSubtitle}>
+                We'll notify you when Compass launches in your area.
+              </Text>
+
+              <TouchableOpacity
+                style={s.backButton}
+                onPress={() => navigation.navigate('Login')}
+                activeOpacity={0.85}
+                accessibilityLabel="Go to sign in"
+                accessibilityRole="button"
+              >
+                <Text style={s.backButtonText}>Back to Sign In</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.successTitle}>You're on the list!</Text>
-          <Text style={styles.successSubtitle}>
-            We'll reach out to {email} as soon as CompassCHW launches in your area.
-          </Text>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.navigate('Login')}
-            activeOpacity={0.8}
-            accessibilityLabel="Go to sign in"
-            accessibilityRole="button"
-          >
-            <Text style={styles.backButtonText}>Back to Sign In</Text>
-          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={s.safeArea}>
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.scrollContent}
+          style={s.flex}
+          contentContainerStyle={s.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Header ────────────────────────────────────────────────── */}
-          <View style={styles.header}>
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoBadgeText}>C</Text>
+          {/* ── Logo wordmark ─────────────────────────────────────────────── */}
+          <View style={s.logoRow}>
+            <View style={s.logoPulse} />
+            <Text style={s.wordmark}>
+              Compass<Text style={s.wordmarkAccent}>CHW</Text>
+            </Text>
+          </View>
+
+          {/* ── Hero copy ─────────────────────────────────────────────────── */}
+          <View style={s.heroSection}>
+            <View style={s.eyebrowRow}>
+              <View style={s.eyebrowDot} />
+              <Text style={s.eyebrowText}>LAUNCHING SOON IN LOS ANGELES</Text>
             </View>
-            <Text style={styles.wordmark}>
-              Compass<Text style={styles.wordmarkAccent}>CHW</Text>
-            </Text>
-          </View>
 
-          {/* ── Hero copy ─────────────────────────────────────────────── */}
-          <View style={styles.heroSection}>
-            <Text style={styles.heroTitle}>
+            <Text style={s.heroTitle}>
               Community health,{' '}
-              <Text style={styles.heroTitleAccent}>connected.</Text>
+              <Text style={s.heroTitleAccent}>connected.</Text>
             </Text>
-            <Text style={styles.heroSubtitle}>
-              CompassCHW connects community health workers with members who need
-              help navigating housing, food, recovery, and healthcare. Be the
-              first to know when we launch.
+
+            <Text style={s.heroSubtitle}>
+              Compass CHW connects Los Angeles residents with trusted{' '}
+              <Text style={s.heroSubtitleBold}>Community Health Workers</Text> — neighbors
+              trained to help with housing, recovery, food, mental health, and healthcare navigation.
             </Text>
           </View>
 
-          {/* ── Trust badges ──────────────────────────────────────────── */}
-          <View style={styles.trustBadgesContainer}>
-            {TRUST_BADGES.map((badge) => (
-              <View key={badge.label} style={styles.trustBadge}>
-                <Text style={styles.trustBadgeLabel}>{badge.label}</Text>
-                <Text style={styles.trustBadgeSublabel}>{badge.sublabel}</Text>
+          {/* ── Trust badges ──────────────────────────────────────────────── */}
+          <View style={s.trustBadgesRow}>
+            {TRUST_BADGES.map(({ icon: Icon, label }) => (
+              <View key={label} style={s.trustBadge}>
+                <Icon size={14} color={colors.primary} />
+                <Text style={s.trustBadgeText}>{label}</Text>
               </View>
             ))}
           </View>
 
-          {/* ── Form card ─────────────────────────────────────────────── */}
-          <View style={styles.card}>
-            <View style={styles.cardAccentBar} />
+          {/* ── Form card ─────────────────────────────────────────────────── */}
+          <View style={[s.card, shadows.elevated]}>
+            {/* Gradient top bar: primary → compassNude */}
+            <View style={s.cardGradientBar}>
+              <View style={s.cardGradientLeft} />
+              <View style={s.cardGradientRight} />
+            </View>
 
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>Join the Waitlist</Text>
-              <Text style={styles.cardSubtitle}>
-                We'll notify you as soon as we launch in your area.
-              </Text>
+            <View style={s.cardBody}>
+              <View style={s.cardHeader}>
+                <Text style={s.cardTitle}>Get early access</Text>
+                <Text style={s.cardSubtitle}>
+                  Be the first to know when Compass launches in your area.
+                  Join the waitlist — it takes 10 seconds.
+                </Text>
+              </View>
 
               {/* Error */}
               {error !== null && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}</Text>
+                <View style={s.errorContainer}>
+                  <Text style={s.errorText}>{error}</Text>
                 </View>
               )}
 
-              {/* First name */}
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, styles.inputGroupHalf]}>
-                  <Text style={styles.inputLabel}>First Name</Text>
+              {/* First + Last name row */}
+              <View style={s.nameRow}>
+                <View style={[s.inputGroup, s.inputHalf]}>
+                  <Text style={s.inputLabel}>FIRST NAME</Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={s.textInput}
                     placeholder="Maria"
-                    placeholderTextColor={colors.mutedForeground}
+                    placeholderTextColor={`${colors.mutedForeground}88`}
                     value={firstName}
                     onChangeText={setFirstName}
                     autoCapitalize="words"
@@ -238,12 +267,12 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
                     accessibilityLabel="First name"
                   />
                 </View>
-                <View style={[styles.inputGroup, styles.inputGroupHalf]}>
-                  <Text style={styles.inputLabel}>Last Name</Text>
+                <View style={[s.inputGroup, s.inputHalf]}>
+                  <Text style={s.inputLabel}>LAST NAME</Text>
                   <TextInput
-                    style={styles.textInput}
-                    placeholder="Reyes"
-                    placeholderTextColor={colors.mutedForeground}
+                    style={s.textInput}
+                    placeholder="Garcia"
+                    placeholderTextColor={`${colors.mutedForeground}88`}
                     value={lastName}
                     onChangeText={setLastName}
                     autoCapitalize="words"
@@ -256,12 +285,12 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
               </View>
 
               {/* Email */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+              <View style={s.inputGroup}>
+                <Text style={s.inputLabel}>EMAIL ADDRESS</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={s.textInput}
                   placeholder="maria@example.com"
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={`${colors.mutedForeground}88`}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -273,16 +302,16 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
                 />
               </View>
 
-              {/* Role — custom segmented selector */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>I am a...</Text>
-                <View style={styles.roleSelector}>
+              {/* Role — segmented selector */}
+              <View style={s.inputGroup}>
+                <Text style={s.inputLabel}>I AM A...</Text>
+                <View style={s.roleSelector}>
                   {ROLE_OPTIONS.map((option) => (
                     <TouchableOpacity
                       key={option.value}
                       style={[
-                        styles.roleOption,
-                        role === option.value && styles.roleOptionSelected,
+                        s.roleOption,
+                        role === option.value && s.roleOptionSelected,
                       ]}
                       onPress={() => setRole(option.value)}
                       activeOpacity={0.7}
@@ -292,8 +321,8 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
                     >
                       <Text
                         style={[
-                          styles.roleOptionText,
-                          role === option.value && styles.roleOptionTextSelected,
+                          s.roleOptionText,
+                          role === option.value && s.roleOptionTextSelected,
                         ]}
                       >
                         {option.label}
@@ -305,7 +334,7 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
 
               {/* Submit */}
               <TouchableOpacity
-                style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+                style={[s.submitButton, isLoading && s.submitButtonDisabled]}
                 onPress={handleSubmit}
                 disabled={isLoading}
                 activeOpacity={0.85}
@@ -315,19 +344,28 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
                 {isLoading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.submitButtonText}>Join the Waitlist  →</Text>
+                  <Text style={s.submitButtonText}>Join the Waitlist  →</Text>
                 )}
               </TouchableOpacity>
 
+              {/* Footer copy */}
+              <Text style={s.footerNote}>No spam, ever. Unsubscribe anytime.</Text>
+
+              {/* Social proof */}
+              <View style={s.socialProofRow}>
+                <View style={s.socialProofDot} />
+                <Text style={s.socialProofText}>Join hundreds of CHWs and community members</Text>
+              </View>
+
               {/* Already have account */}
-              <View style={styles.signInLinkContainer}>
-                <Text style={styles.signInLinkText}>Already have an account?  </Text>
+              <View style={s.signInRow}>
+                <Text style={s.signInText}>Already have an account?  </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Login')}
                   accessibilityRole="button"
                   accessibilityLabel="Go to sign in"
                 >
-                  <Text style={styles.signInLink}>Sign in</Text>
+                  <Text style={s.signInLink}>Sign in</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -340,7 +378,7 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -350,244 +388,323 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 40,
-    gap: 24,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xl,
+    gap: spacing.xl,
   },
 
-  // Header / logo
-  header: {
+  // ── Logo ──────────────────────────────────────────────────────────────────
+  logoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
-  logoBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoBadgeText: {
-    ...typography.displaySm,
-    color: '#FFFFFF',
+  logoPulse: {
+    width: 10,
+    height: 10,
+    borderRadius: radii.full,
+    backgroundColor: colors.secondary,
   },
   wordmark: {
-    ...typography.displaySm,
+    fontFamily: fonts.display,
+    fontSize: 22,
     color: colors.foreground,
+    letterSpacing: -0.5,
   },
   wordmarkAccent: {
     color: colors.secondary,
   },
 
-  // Hero
+  // ── Hero ──────────────────────────────────────────────────────────────────
   heroSection: {
-    gap: 12,
+    gap: spacing.md,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  eyebrowDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.full,
+    backgroundColor: colors.secondary,
+  },
+  eyebrowText: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: colors.mutedForeground,
   },
   heroTitle: {
-    ...typography.displayMd,
+    fontFamily: fonts.display,
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: -0.8,
     color: colors.foreground,
-    textAlign: 'center',
   },
   heroTitleAccent: {
     color: colors.secondary,
   },
   heroSubtitle: {
-    ...typography.bodyMd,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.mutedForeground,
-    textAlign: 'center',
-    lineHeight: 24,
+  },
+  heroSubtitleBold: {
+    fontFamily: fonts.bodySemibold,
+    color: colors.foreground,
   },
 
-  // Trust badges
-  trustBadgesContainer: {
+  // ── Trust badges ──────────────────────────────────────────────────────────
+  trustBadgesRow: {
     flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   trustBadge: {
-    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    gap: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.full,
+    backgroundColor: `${colors.primary}10`,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderColor: `${colors.primary}20`,
   },
-  trustBadgeLabel: {
-    ...typography.label,
+  trustBadgeText: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 12,
+    letterSpacing: 0.3,
     color: colors.primary,
-    fontWeight: '700',
-  },
-  trustBadgeSublabel: {
-    ...typography.label,
-    color: colors.mutedForeground,
-    marginTop: 2,
   },
 
-  // Card
+  // ── Card shared ───────────────────────────────────────────────────────────
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
-  cardAccentBar: {
-    height: 6,
+  cardGradientBar: {
+    height: 3,
+    flexDirection: 'row',
+  },
+  cardGradientLeft: {
+    flex: 3,
     backgroundColor: colors.primary,
   },
+  cardGradientRight: {
+    flex: 2,
+    backgroundColor: colors.compassNude,
+  },
   cardBody: {
-    padding: 28,
-    gap: 16,
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  cardHeader: {
+    gap: spacing.xs + 2,
+    marginBottom: spacing.xs,
   },
   cardTitle: {
-    ...typography.displaySm,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 22,
     color: colors.foreground,
   },
   cardSubtitle: {
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.mutedForeground,
+    lineHeight: 20,
   },
 
-  // Error
+  // ── Error ─────────────────────────────────────────────────────────────────
   errorContainer: {
     backgroundColor: 'rgba(220,38,38,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md - 2,
+    paddingVertical: spacing.md,
   },
   errorText: {
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.destructive,
   },
 
-  // Inputs
-  inputRow: {
+  // ── Inputs ────────────────────────────────────────────────────────────────
+  nameRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   inputGroup: {
-    gap: 6,
+    gap: spacing.xs - 2,
   },
-  inputGroupHalf: {
+  inputHalf: {
     flex: 1,
   },
   inputLabel: {
-    ...typography.label,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 1,
     color: colors.mutedForeground,
   },
   textInput: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    paddingHorizontal: 16,
+    borderRadius: radii.md,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.foreground,
   },
 
-  // Role selector
+  // ── Role selector ─────────────────────────────────────────────────────────
   roleSelector: {
-    gap: 8,
+    gap: spacing.sm,
   },
   roleOption: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    backgroundColor: colors.background,
+    borderRadius: radii.md,
+    backgroundColor: '#FFFFFF',
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.md,
   },
   roleOptionSelected: {
     borderColor: colors.primary,
-    backgroundColor: `${colors.primary}0D`, // ~5% opacity
+    backgroundColor: `${colors.primary}0D`,
   },
   roleOptionText: {
-    ...typography.bodySm,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.mutedForeground,
   },
   roleOptionTextSelected: {
+    fontFamily: fonts.bodySemibold,
     color: colors.primary,
-    fontWeight: '600',
   },
 
-  // Submit
+  // ── Submit button ─────────────────────────────────────────────────────────
   submitButton: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
     minHeight: 52,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
-    ...typography.bodyMd,
-    fontWeight: '700',
+    fontFamily: fonts.display,
+    fontSize: 16,
     color: '#FFFFFF',
   },
 
-  // Sign in link
-  signInLinkContainer: {
+  // ── Footer ────────────────────────────────────────────────────────────────
+  footerNote: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: `${colors.mutedForeground}99`,
+    textAlign: 'center',
+  },
+  socialProofRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  socialProofDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radii.full,
+    backgroundColor: colors.secondary,
+  },
+  socialProofText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
+  signInRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  signInLinkText: {
-    ...typography.bodySm,
+  signInText: {
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.mutedForeground,
   },
   signInLink: {
-    ...typography.bodySm,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
+    fontSize: 14,
     color: colors.primary,
   },
 
-  // Success state
-  successContainer: {
+  // ── Success card ──────────────────────────────────────────────────────────
+  successFullScreen: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    paddingHorizontal: spacing.xl,
+  },
+  successCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  successCardBody: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
   },
   successIconWrapper: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 80,
+    height: 80,
+    borderRadius: radii.full,
     backgroundColor: `${colors.primary}14`,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   successTitle: {
-    ...typography.displaySm,
+    fontFamily: fonts.displaySemibold,
+    fontSize: 24,
     color: colors.foreground,
     textAlign: 'center',
   },
   successSubtitle: {
-    ...typography.bodyMd,
+    fontFamily: fonts.body,
+    fontSize: 15,
     color: colors.mutedForeground,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   backButton: {
-    marginTop: 8,
+    marginTop: spacing.sm,
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md - 2,
+    paddingHorizontal: spacing.xl,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backButtonText: {
-    ...typography.bodyMd,
-    fontWeight: '700',
+    fontFamily: fonts.display,
+    fontSize: 15,
     color: '#FFFFFF',
   },
 });
