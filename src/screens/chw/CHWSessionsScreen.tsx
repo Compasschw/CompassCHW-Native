@@ -4,17 +4,20 @@
  * Features:
  *  - Tab bar: Active (scheduled + in_progress) vs Completed
  *  - Session cards with vertical icon, member name, status badge, date/time, mode
- *  - Active sessions: Start / Complete action buttons
- *  - Completed sessions: duration, units billed, net earnings
+ *  - Active sessions: live timer (MM:SS), consent checkbox before start, Start / Complete actions
+ *  - In-progress sessions: Chat button (opens SessionChat modal)
+ *  - Completed sessions: "Document Session" button (opens DocumentationModal)
+ *  - Duration, units billed, net earnings on completed sessions
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -27,6 +30,10 @@ import {
   Stethoscope,
   Clock,
   DollarSign,
+  MessageSquare,
+  FileText,
+  X,
+  Check,
 } from 'lucide-react-native';
 
 import { colors } from '../../theme/colors';
@@ -39,7 +46,10 @@ import {
   type Session,
   type SessionStatus,
   type Vertical,
+  type SessionDocumentation,
 } from '../../data/mock';
+import { DocumentationModal } from '../../components/sessions/DocumentationModal';
+import { SessionChat } from '../../components/sessions/SessionChat';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -95,6 +105,15 @@ function formatScheduledAt(iso: string): string {
   });
 }
 
+/**
+ * Formats elapsed seconds as MM:SS (e.g. 65 → "01:05").
+ */
+function formatElapsedTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 // ─── VerticalIcon helper ──────────────────────────────────────────────────────
 
 function VerticalIconComponent({
@@ -119,20 +138,159 @@ function VerticalIconComponent({
   }
 }
 
+// ─── SessionTimer ─────────────────────────────────────────────────────────────
+
+interface SessionTimerProps {
+  /** Unix timestamp (ms) when session was started */
+  startedAtMs: number;
+}
+
+/**
+ * Live session timer that ticks every second using setInterval.
+ * Displays elapsed time in MM:SS format.
+ */
+function SessionTimer({ startedAtMs }: SessionTimerProps): React.JSX.Element {
+  const [elapsedSeconds, setElapsedSeconds] = useState(() =>
+    Math.floor((Date.now() - startedAtMs) / 1000),
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAtMs) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startedAtMs]);
+
+  return (
+    <View style={timerStyles.container}>
+      <Clock size={12} color={colors.compassGold} />
+      <Text style={timerStyles.text}>{formatElapsedTime(elapsedSeconds)}</Text>
+    </View>
+  );
+}
+
+const timerStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.compassGold + '18',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.compassGold + '40',
+  },
+  text: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.compassGold,
+    fontVariant: ['tabular-nums'],
+  },
+});
+
+// ─── ConsentCheckbox ──────────────────────────────────────────────────────────
+
+interface ConsentCheckboxProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}
+
+/**
+ * Member recording consent checkbox displayed before starting a session.
+ */
+function ConsentCheckbox({ checked, onChange }: ConsentCheckboxProps): React.JSX.Element {
+  return (
+    <TouchableOpacity
+      style={[consentStyles.row, checked && consentStyles.rowChecked]}
+      onPress={() => onChange(!checked)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel="I confirm the member has consented to this session being recorded"
+      activeOpacity={0.7}
+    >
+      <View style={[consentStyles.checkbox, checked && consentStyles.checkboxChecked]}>
+        {checked && <Check size={9} color="#FFFFFF" strokeWidth={3} />}
+      </View>
+      <Text style={consentStyles.text}>
+        Member has consented to session recording (required)
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+const consentStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: colors.background,
+    marginTop: 10,
+  },
+  rowChecked: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '06',
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  checkboxChecked: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  text: {
+    flex: 1,
+    ...typography.label,
+    color: colors.mutedForeground,
+    lineHeight: 18,
+  },
+});
+
 // ─── SessionCard sub-component ────────────────────────────────────────────────
 
 interface SessionCardProps {
   session: Session;
-  onStart?: (id: string) => void;
-  onComplete?: (id: string) => void;
+  /** Unix ms timestamp for when session entered in_progress status */
+  startedAtMs?: number;
+  /** Whether consent checkbox has been checked for this session */
+  consentChecked: boolean;
+  onConsentChange: (id: string, checked: boolean) => void;
+  onStart: (id: string) => void;
+  onComplete: (id: string) => void;
+  onDocumentSession: (id: string) => void;
+  onOpenChat: (id: string) => void;
 }
 
-function SessionCard({ session, onStart, onComplete }: SessionCardProps): React.JSX.Element {
+function SessionCard({
+  session,
+  startedAtMs,
+  consentChecked,
+  onConsentChange,
+  onStart,
+  onComplete,
+  onDocumentSession,
+  onOpenChat,
+}: SessionCardProps): React.JSX.Element {
   const verticalColor = VERTICAL_COLORS[session.vertical];
   const statusColor = SESSION_STATUS_COLORS[session.status];
   const billingStatus = deriveBillingStatus(session.id);
 
-  const isActive = session.status === 'scheduled' || session.status === 'in_progress';
+  const isScheduled = session.status === 'scheduled';
+  const isInProgress = session.status === 'in_progress';
+  const isActive = isScheduled || isInProgress;
   const isCompleted = session.status === 'completed';
 
   return (
@@ -150,6 +308,10 @@ function SessionCard({ session, onStart, onComplete }: SessionCardProps): React.
                 {sessionStatusLabels[session.status]}
               </Text>
             </View>
+            {/* Live timer for in-progress sessions */}
+            {isInProgress && startedAtMs != null && (
+              <SessionTimer startedAtMs={startedAtMs} />
+            )}
           </View>
           <Text style={cardStyles.meta}>
             {formatScheduledAt(session.scheduledAt)}
@@ -159,65 +321,109 @@ function SessionCard({ session, onStart, onComplete }: SessionCardProps): React.
         </View>
       </View>
 
+      {/* Consent checkbox — shown on scheduled sessions before starting */}
+      {isScheduled && (
+        <ConsentCheckbox
+          checked={consentChecked}
+          onChange={(checked) => onConsentChange(session.id, checked)}
+        />
+      )}
+
       {/* Completed stats */}
-      {isCompleted ? (
+      {isCompleted && (
         <View style={cardStyles.statsRow}>
-          {session.durationMinutes != null ? (
+          {session.durationMinutes != null && (
             <View style={cardStyles.statChip}>
               <Clock size={12} color={colors.mutedForeground} />
               <Text style={cardStyles.statChipText}>{session.durationMinutes} min</Text>
             </View>
-          ) : null}
-          {session.unitsBilled != null ? (
+          )}
+          {session.unitsBilled != null && (
             <View style={cardStyles.statChip}>
               <Text style={cardStyles.statChipText}>{session.unitsBilled} units</Text>
             </View>
-          ) : null}
-          {session.netAmount != null ? (
+          )}
+          {session.netAmount != null && (
             <View style={cardStyles.statChip}>
               <DollarSign size={12} color={colors.primary} />
               <Text style={[cardStyles.statChipText, { color: colors.primary, fontWeight: '700' }]}>
                 {formatCurrency(session.netAmount)} net
               </Text>
             </View>
-          ) : null}
+          )}
           <View
-            style={[cardStyles.badge, { backgroundColor: BILLING_STATUS_COLORS[billingStatus] + '18' }]}
+            style={[
+              cardStyles.badge,
+              { backgroundColor: BILLING_STATUS_COLORS[billingStatus] + '18' },
+            ]}
           >
-            <Text style={[cardStyles.badgeText, { color: BILLING_STATUS_COLORS[billingStatus] }]}>
+            <Text
+              style={[cardStyles.badgeText, { color: BILLING_STATUS_COLORS[billingStatus] }]}
+            >
               {BILLING_STATUS_LABELS[billingStatus]}
             </Text>
           </View>
         </View>
-      ) : null}
+      )}
 
       {/* Active action buttons */}
-      {isActive ? (
+      {isActive && (
         <View style={cardStyles.actionRow}>
-          {session.status === 'scheduled' && onStart ? (
+          {isScheduled && (
             <TouchableOpacity
-              style={cardStyles.startButton}
+              style={[
+                cardStyles.startButton,
+                !consentChecked && cardStyles.startButtonDisabled,
+              ]}
               onPress={() => onStart(session.id)}
+              disabled={!consentChecked}
               accessibilityLabel={`Start session with ${session.memberName}`}
               accessibilityRole="button"
+              accessibilityState={{ disabled: !consentChecked }}
             >
               <Play size={14} color="#FFFFFF" />
               <Text style={cardStyles.startButtonText}>Start Session</Text>
             </TouchableOpacity>
-          ) : null}
-          {session.status === 'in_progress' && onComplete ? (
-            <TouchableOpacity
-              style={cardStyles.completeButton}
-              onPress={() => onComplete(session.id)}
-              accessibilityLabel={`Complete session with ${session.memberName}`}
-              accessibilityRole="button"
-            >
-              <CheckCircle size={14} color={colors.primary} />
-              <Text style={cardStyles.completeButtonText}>Complete</Text>
-            </TouchableOpacity>
-          ) : null}
+          )}
+          {isInProgress && (
+            <>
+              <TouchableOpacity
+                style={cardStyles.chatButton}
+                onPress={() => onOpenChat(session.id)}
+                accessibilityLabel={`Open chat for session with ${session.memberName}`}
+                accessibilityRole="button"
+              >
+                <MessageSquare size={14} color={colors.secondary} />
+                <Text style={cardStyles.chatButtonText}>Chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={cardStyles.completeButton}
+                onPress={() => onComplete(session.id)}
+                accessibilityLabel={`Complete session with ${session.memberName}`}
+                accessibilityRole="button"
+              >
+                <CheckCircle size={14} color={colors.primary} />
+                <Text style={cardStyles.completeButtonText}>Complete</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
-      ) : null}
+      )}
+
+      {/* Document button — shown on completed sessions */}
+      {isCompleted && (
+        <View style={[cardStyles.actionRow, { marginTop: 10 }]}>
+          <TouchableOpacity
+            style={cardStyles.documentButton}
+            onPress={() => onDocumentSession(session.id)}
+            accessibilityLabel={`Document session with ${session.memberName}`}
+            accessibilityRole="button"
+          >
+            <FileText size={14} color={colors.primary} />
+            <Text style={cardStyles.documentButtonText}>Document Session</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -253,7 +459,7 @@ const cardStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   memberName: {
     ...typography.bodyMd,
@@ -298,7 +504,6 @@ const cardStyles = StyleSheet.create({
     color: colors.mutedForeground,
   },
   actionRow: {
-    marginTop: 12,
     flexDirection: 'row',
     gap: 10,
   },
@@ -311,6 +516,9 @@ const cardStyles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingVertical: 11,
     borderRadius: 12,
+  },
+  startButtonDisabled: {
+    opacity: 0.4,
   },
   startButtonText: {
     ...typography.bodySm,
@@ -334,6 +542,104 @@ const cardStyles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
+  chatButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.secondary,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  chatButtonText: {
+    ...typography.bodySm,
+    fontWeight: '600',
+    color: colors.secondary,
+  },
+  documentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary + '12',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  documentButtonText: {
+    ...typography.bodySm,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+});
+
+// ─── ChatModal wrapper ────────────────────────────────────────────────────────
+
+interface ChatModalProps {
+  visible: boolean;
+  sessionId: string;
+  onClose: () => void;
+}
+
+function ChatModal({ visible, sessionId, onClose }: ChatModalProps): React.JSX.Element {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+      accessible
+      accessibilityViewIsModal
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+        {/* Modal header */}
+        <View style={chatModalStyles.header}>
+          <Text style={chatModalStyles.headerTitle}>Session Chat</Text>
+          <TouchableOpacity
+            style={chatModalStyles.closeButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close chat"
+          >
+            <X size={20} color={colors.foreground} />
+          </TouchableOpacity>
+        </View>
+        <SessionChat sessionId={sessionId} />
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+const chatModalStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  headerTitle: {
+    ...typography.displaySm,
+    color: colors.foreground,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 });
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -341,31 +647,40 @@ const cardStyles = StyleSheet.create({
 type SessionTab = 'active' | 'completed';
 
 /**
- * CHW Sessions screen — lists active and completed sessions with action controls.
+ * CHW Sessions screen — lists active and completed sessions with:
+ * - Live timer for in-progress sessions
+ * - Consent checkbox before starting
+ * - Chat modal for active sessions
+ * - Documentation modal for completed sessions
  */
 export function CHWSessionsScreen(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<SessionTab>('active');
 
   // Optimistic status overrides: sessionId → new status
-  const [statusOverrides, setStatusOverrides] = useState<
-    Record<string, SessionStatus>
-  >({});
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, SessionStatus>>({});
+
+  // Tracks when sessions went in_progress (for live timer)
+  const startTimestamps = useRef<Record<string, number>>({});
+
+  // Consent checkbox state per session
+  const [consentState, setConsentState] = useState<Record<string, boolean>>({});
+
+  // Documentation modal state
+  const [documentingSessionId, setDocumentingSessionId] = useState<string | null>(null);
+
+  // Chat modal state
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
 
   const allSessions = useMemo<Session[]>(
     () =>
       sessions.map((s) =>
-        statusOverrides[s.id]
-          ? { ...s, status: statusOverrides[s.id] }
-          : s,
+        statusOverrides[s.id] ? { ...s, status: statusOverrides[s.id] } : s,
       ),
     [statusOverrides],
   );
 
   const activeSessions = useMemo<Session[]>(
-    () =>
-      allSessions.filter(
-        (s) => s.status === 'scheduled' || s.status === 'in_progress',
-      ),
+    () => allSessions.filter((s) => s.status === 'scheduled' || s.status === 'in_progress'),
     [allSessions],
   );
 
@@ -376,13 +691,61 @@ export function CHWSessionsScreen(): React.JSX.Element {
 
   const displayedSessions = activeTab === 'active' ? activeSessions : completedSessions;
 
-  const handleStart = useCallback((id: string) => {
+  const handleConsentChange = useCallback((id: string, checked: boolean): void => {
+    setConsentState((prev) => ({ ...prev, [id]: checked }));
+  }, []);
+
+  const handleStart = useCallback((id: string): void => {
+    startTimestamps.current[id] = Date.now();
     setStatusOverrides((prev) => ({ ...prev, [id]: 'in_progress' }));
   }, []);
 
-  const handleComplete = useCallback((id: string) => {
+  const handleComplete = useCallback((id: string): void => {
     setStatusOverrides((prev) => ({ ...prev, [id]: 'completed' }));
+    // Auto-switch to completed tab after completing
+    setActiveTab('completed');
   }, []);
+
+  const handleDocumentSession = useCallback((id: string): void => {
+    setDocumentingSessionId(id);
+  }, []);
+
+  const handleDocumentationSubmit = useCallback(
+    (data: SessionDocumentation): void => {
+      // In production: persist to API. For demo, just close the modal.
+      setDocumentingSessionId(null);
+    },
+    [],
+  );
+
+  const handleOpenChat = useCallback((id: string): void => {
+    setChatSessionId(id);
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Session }) => (
+      <SessionCard
+        session={item}
+        startedAtMs={
+          item.status === 'in_progress' ? (startTimestamps.current[item.id] ?? Date.now()) : undefined
+        }
+        consentChecked={consentState[item.id] ?? false}
+        onConsentChange={handleConsentChange}
+        onStart={handleStart}
+        onComplete={handleComplete}
+        onDocumentSession={handleDocumentSession}
+        onOpenChat={handleOpenChat}
+      />
+    ),
+    [
+      consentState,
+      handleConsentChange,
+      handleStart,
+      handleComplete,
+      handleDocumentSession,
+      handleOpenChat,
+    ],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -418,13 +781,7 @@ export function CHWSessionsScreen(): React.JSX.Element {
         <FlatList
           data={displayedSessions}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <SessionCard
-              session={item}
-              onStart={activeTab === 'active' ? handleStart : undefined}
-              onComplete={activeTab === 'active' ? handleComplete : undefined}
-            />
-          )}
+          renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -442,6 +799,25 @@ export function CHWSessionsScreen(): React.JSX.Element {
               : 'Completed sessions will appear here.'}
           </Text>
         </View>
+      )}
+
+      {/* Documentation modal */}
+      {documentingSessionId != null && (
+        <DocumentationModal
+          visible={documentingSessionId != null}
+          onClose={() => setDocumentingSessionId(null)}
+          sessionId={documentingSessionId}
+          onSubmit={handleDocumentationSubmit}
+        />
+      )}
+
+      {/* Chat modal */}
+      {chatSessionId != null && (
+        <ChatModal
+          visible={chatSessionId != null}
+          sessionId={chatSessionId}
+          onClose={() => setChatSessionId(null)}
+        />
       )}
     </SafeAreaView>
   );

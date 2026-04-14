@@ -17,6 +17,8 @@ import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { WaitlistScreen } from '../screens/auth/WaitlistScreen';
+import { CHWOnboardingScreen } from '../screens/onboarding/CHWOnboardingScreen';
+import { MemberOnboardingScreen } from '../screens/onboarding/MemberOnboardingScreen';
 import { CHWTabNavigator } from './CHWTabNavigator';
 import { MemberTabNavigator } from './MemberTabNavigator';
 
@@ -26,6 +28,8 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   Waitlist: undefined;
+  CHWOnboarding: undefined;
+  MemberOnboarding: undefined;
 };
 
 // ─── Root stack param list ────────────────────────────────────────────────────
@@ -49,6 +53,9 @@ function AuthNavigator(): React.JSX.Element {
           toggle on the same screen, keeping the auth flow compact. */}
       <AuthStack.Screen name="Register" component={LoginScreen} />
       <AuthStack.Screen name="Waitlist" component={WaitlistScreen} />
+      {/* Onboarding screens — reached after successful registration */}
+      <AuthStack.Screen name="CHWOnboarding" component={CHWOnboardingScreen} />
+      <AuthStack.Screen name="MemberOnboarding" component={MemberOnboardingScreen} />
     </AuthStack.Navigator>
   );
 }
