@@ -57,6 +57,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/typography';
 import { spacing, radii } from '../theme/spacing';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
+import { InfiniteSlider } from '../components/InfiniteSlider';
 
 // ─── Assets ───────────────────────────────────────────────────────────────────
 
@@ -739,13 +740,11 @@ export function LandingScreen(): React.JSX.Element {
             Working with leading health organizations
           </Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[
-              staticStyles.clientCardsScroll,
-              { paddingHorizontal: isDesktop ? 48 : spacing.lg },
-            ]}
+          <InfiniteSlider
+            gap={isDesktop ? 24 : 12}
+            duration={isDesktop ? 50 : 35}
+            fadeEdges
+            style={{ marginTop: spacing.lg }}
           >
             {PARTNER_LOGOS.map((logo) => (
               <View key={logo.name} style={staticStyles.clientCard}>
@@ -755,7 +754,7 @@ export function LandingScreen(): React.JSX.Element {
                 <Text style={staticStyles.clientCardName}>{logo.name}</Text>
               </View>
             ))}
-          </ScrollView>
+          </InfiniteSlider>
         </View>
 
         {/* ════════════════════════════════════════════════════════════════
