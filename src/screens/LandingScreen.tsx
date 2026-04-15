@@ -224,7 +224,7 @@ const STATS: Stat[] = [
 // ─── Hero stats (floating card on hero image) ─────────────────────────────────
 
 const HERO_STATS = [
-  { label: 'ACTIVE CHWs', value: '200+' },
+  { label: 'MEDI-CAL MEMBERS IN NEED', value: '3M+' },
   { label: 'AVG. EARNINGS', value: '$32/hour' },
   { label: 'MEMBER COST', value: '$0' },
 ];
