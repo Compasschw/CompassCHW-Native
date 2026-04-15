@@ -207,20 +207,6 @@ const SERVICE_CARDS: ServiceCard[] = [
   },
 ];
 
-// ─── Stats data ───────────────────────────────────────────────────────────────
-
-interface Stat {
-  value: string;
-  label: string;
-}
-
-const STATS: Stat[] = [
-  { value: '81%', label: 'CHW session completion' },
-  { value: '5', label: 'Service verticals' },
-  { value: '$32', label: 'Avg. earning / hour' },
-  { value: '$0', label: 'Cost to members' },
-];
-
 // ─── Hero stats (floating card on hero image) ─────────────────────────────────
 
 const HERO_STATS = [
@@ -821,40 +807,6 @@ export function LandingScreen(): React.JSX.Element {
               ))}
             </View>
 
-            {/* Stats bar */}
-            <View
-              style={[
-                staticStyles.statsBar,
-                {
-                  marginTop: isDesktop ? 56 : 24,
-                  flexDirection: 'row',
-                  flexWrap: isDesktop ? 'nowrap' : 'wrap',
-                },
-              ]}
-            >
-              {STATS.map((stat, index) => (
-                <View
-                  key={stat.value}
-                  style={[
-                    staticStyles.statCell,
-                    { width: isDesktop ? `${100 / 4}%` : '50%' },
-                    !isDesktop && index % 2 !== 1 && staticStyles.statCellBorderRight,
-                    !isDesktop && index < 2 && staticStyles.statCellBorderBottom,
-                    isDesktop && index < 3 && staticStyles.statCellBorderRight,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      staticStyles.statValue,
-                      { fontSize: isDesktop ? 56 : 40, lineHeight: isDesktop ? 60 : 48 },
-                    ]}
-                  >
-                    {stat.value}
-                  </Text>
-                  <Text style={staticStyles.statLabel}>{stat.label}</Text>
-                </View>
-              ))}
-            </View>
           </ContentWrapper>
         </View>
 
