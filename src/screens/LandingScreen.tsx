@@ -51,6 +51,7 @@ import {
   ArrowRight,
   MapPin,
   Smartphone,
+  Bus,
 } from 'lucide-react-native';
 
 import { colors } from '../theme/colors';
@@ -198,6 +199,11 @@ const SERVICE_CARDS: ServiceCard[] = [
     icon: HeartPulse,
     title: 'Healthcare',
     description: 'Assist with Medi-Cal enrollment, appointments, and care coordination.',
+  },
+  {
+    icon: Bus,
+    title: 'Transportation Assistance',
+    description: 'Coordinate rides to medical appointments, social services, and community resources.',
   },
 ];
 
@@ -451,7 +457,7 @@ export function LandingScreen(): React.JSX.Element {
   // Compute service card width dynamically — 5 columns on desktop, 2 on mobile.
   // The grid uses gap: 12; on desktop the container is MAX_CONTENT_WIDTH - 2*px.
   const serviceGridGap = isDesktop ? 20 : 10;
-  const serviceCardCount = isDesktop ? 5 : 2;
+  const serviceCardCount = isDesktop ? 3 : 2;
 
   return (
     <SafeAreaView style={staticStyles.safeArea} edges={['top']}>
@@ -785,13 +791,13 @@ export function LandingScreen(): React.JSX.Element {
               reimbursed for each session.
             </Text>
 
-            {/* Service cards — 5-col row on desktop, 2-col grid on mobile */}
+            {/* Service cards — 3-col grid (2 rows) on desktop, 2-col grid on mobile */}
             <View
               style={[
                 staticStyles.serviceCardsGrid,
                 {
                   flexDirection: 'row',
-                  flexWrap: isDesktop ? 'nowrap' : 'wrap',
+                  flexWrap: 'wrap',
                   gap: serviceGridGap,
                 },
               ]}
