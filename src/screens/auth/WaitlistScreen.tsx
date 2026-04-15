@@ -2,17 +2,21 @@
  * WaitlistScreen — join the CompassCHW waitlist.
  *
  * Layout adapts at 1024 px (isDesktop):
- *   - Desktop: 2-column layout (left marketing copy | right form card)
- *   - Mobile:  single column vertical stack
+ *   - Desktop: sticky navbar + 2-column layout (left marketing copy | right form card)
+ *   - Mobile:  sticky navbar + single column vertical stack
+ *
+ * Navbar:
+ *   - Compass icon + "CompassCHW" wordmark on the left (CHW in secondary green)
+ *   - Nav links on desktop only (Home, Services, How It Works, For CHWs)
+ *   - "Back to Home" button on the right navigates to Landing
  *
  * Left column (desktop):
- *   - Compass icon + "CompassCHW" wordmark
  *   - Pulsing green dot + "LAUNCHING SOON IN LOS ANGELES" eyebrow
  *   - Headline "Community health, connected." (connected. in secondary green)
  *   - Description with bold "Community Health Workers"
  *   - 3 trust badge pills: HIPAA Compliant, Medi-Cal Accepted, No Cost to Members
  *
- * Right column: form card with gradient top bar, 4 role options, success state.
+ * Right column: form card with gradient top bar, role dropdown modal, success state.
  */
 
 import React, { useState, useCallback, useRef } from 'react';
@@ -22,7 +26,9 @@ import {
   Image,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -33,7 +39,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Shield, CheckCircle, Star } from 'lucide-react-native';
+import { Shield, CheckCircle, Star, ChevronDown } from 'lucide-react-native';
 
 import { submitWaitlist, type WaitlistPayload } from '../../api/waitlist';
 import { colors } from '../../theme/colors';
@@ -61,6 +67,9 @@ const WAITLIST_STORAGE_KEY = 'compass_waitlist_submission';
 /** Viewport width at which the 2-column desktop layout activates. */
 const DESKTOP_BREAKPOINT = 1024;
 
+/** Maximum content width on desktop — mirrors LandingScreen. */
+const MAX_CONTENT_WIDTH = 1280;
+
 // ─── Trust badges ─────────────────────────────────────────────────────────────
 
 interface TrustBadge {
@@ -87,6 +96,9 @@ const ROLE_OPTIONS: RoleOption[] = [
   { value: 'organization', label: 'Organization — We employ CHWs' },
   { value: 'other', label: 'Other' },
 ];
+
+/** Desktop nav links shown only when viewport >= DESKTOP_BREAKPOINT. */
+const NAV_LINKS = ['Home', 'Services', 'How It Works', 'For CHWs'];
 
 // ─── Pulsing dot ──────────────────────────────────────────────────────────────
 
@@ -119,6 +131,134 @@ function PulsingDot({ size = 10 }: { size?: number }): React.JSX.Element {
         { opacity },
       ]}
     />
+  );
+}
+
+// ─── Role Dropdown Modal ──────────────────────────────────────────────────────
+
+interface RoleDropdownProps {
+  /** Currently selected role value, or '' for unselected. */
+  selectedRole: WaitlistRole;
+  /** Called when the user picks a role. */
+  onSelect: (role: WaitlistRole) => void;
+  /** Whether the parent form is in a loading state (disables interaction). */
+  disabled: boolean;
+}
+
+/**
+ * Single-field role selector that opens a Modal overlay with a list of options.
+ * Matches the visual style of the other form inputs (border, background, radius).
+ */
+function RoleDropdown({ selectedRole, onSelect, disabled }: RoleDropdownProps): React.JSX.Element {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedLabel =
+    selectedRole !== ''
+      ? (ROLE_OPTIONS.find((o) => o.value === selectedRole)?.label ?? 'Select your role')
+      : 'Select your role';
+
+  const handleOpen = useCallback((): void => {
+    if (!disabled) {
+      Keyboard.dismiss();
+      setIsOpen(true);
+    }
+  }, [disabled]);
+
+  const handleSelect = useCallback(
+    (value: WaitlistRole): void => {
+      onSelect(value);
+      setIsOpen(false);
+    },
+    [onSelect],
+  );
+
+  const handleClose = useCallback((): void => {
+    setIsOpen(false);
+  }, []);
+
+  return (
+    <>
+      {/* ── Trigger field ── */}
+      <TouchableOpacity
+        style={[s.dropdownTrigger, disabled && s.dropdownTriggerDisabled]}
+        onPress={handleOpen}
+        activeOpacity={0.7}
+        accessibilityLabel="Select your role"
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isOpen }}
+        disabled={disabled}
+      >
+        <Text
+          style={[
+            s.dropdownTriggerText,
+            selectedRole !== '' && s.dropdownTriggerTextSelected,
+          ]}
+          numberOfLines={1}
+        >
+          {selectedLabel}
+        </Text>
+        <ChevronDown
+          size={16}
+          color={selectedRole !== '' ? colors.foreground : `${colors.mutedForeground}88`}
+        />
+      </TouchableOpacity>
+
+      {/* ── Modal overlay ── */}
+      <Modal
+        visible={isOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={handleClose}
+        statusBarTranslucent
+        accessibilityViewIsModal
+      >
+        {/* Dark scrim — tap outside to close */}
+        <Pressable
+          style={s.modalScrim}
+          onPress={handleClose}
+          accessibilityLabel="Close role selector"
+          accessibilityRole="button"
+        >
+          {/* Card — stop propagation so tapping the card doesn't close modal */}
+          <Pressable
+            style={s.modalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={s.modalTitle}>Select your role</Text>
+
+            {ROLE_OPTIONS.map((option, index) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  s.modalOption,
+                  index < ROLE_OPTIONS.length - 1 && s.modalOptionBorder,
+                  option.value === selectedRole && s.modalOptionSelected,
+                ]}
+                onPress={() => handleSelect(option.value)}
+                activeOpacity={0.7}
+                accessibilityLabel={option.label}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: option.value === selectedRole }}
+              >
+                <Text
+                  style={[
+                    s.modalOptionText,
+                    option.value === selectedRole && s.modalOptionTextSelected,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                {option.value === selectedRole && (
+                  <View style={s.modalOptionCheck}>
+                    <CheckCircle size={16} color={colors.primary} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -194,11 +334,75 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
     }
   }, [firstName, lastName, email, role, validate]);
 
+  const handleNavigateHome = useCallback((): void => {
+    navigation.navigate('Landing');
+  }, [navigation]);
+
+  // ── Navbar (shared across all layout branches) ────────────────────────────
+
+  const navbar = (
+    <View style={[s.navbar, isDesktop && s.navbarDesktop]}>
+      <View
+        style={[
+          s.navbarInner,
+          isDesktop && {
+            maxWidth: MAX_CONTENT_WIDTH,
+            alignSelf: 'center',
+            width: '100%',
+            paddingHorizontal: 48,
+          },
+        ]}
+      >
+        {/* Logo + wordmark */}
+        <View style={s.navbarLeft}>
+          <Image
+            source={compassIcon}
+            style={s.navLogo}
+            accessibilityIgnoresInvertColors
+            accessibilityLabel="Compass icon"
+          />
+          <Text style={s.navWordmark}>
+            Compass<Text style={s.navWordmarkAccent}>CHW</Text>
+          </Text>
+        </View>
+
+        {/* Desktop-only nav links */}
+        {isDesktop && (
+          <View style={s.navLinks}>
+            {NAV_LINKS.map((link) => (
+              <TouchableOpacity
+                key={link}
+                onPress={link === 'Home' ? handleNavigateHome : undefined}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={link}
+              >
+                <Text style={s.navLinkText}>{link}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Right CTA — navigates back to Landing since we are already on Waitlist */}
+        <TouchableOpacity
+          style={s.navHomeButton}
+          onPress={handleNavigateHome}
+          activeOpacity={0.82}
+          accessibilityLabel="Back to home"
+          accessibilityRole="button"
+        >
+          <Text style={s.navHomeButtonText}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   // ── Success state ─────────────────────────────────────────────────────────
 
   if (isSuccess) {
     return (
       <SafeAreaView style={s.safeArea}>
+        {navbar}
         <View style={s.successFullScreen}>
           <View style={[s.formCard, shadows.elevated, isDesktop && { maxWidth: 480 }]}>
             {/* Gradient top bar */}
@@ -310,34 +514,14 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
           />
         </View>
 
-        {/* Role — selectable rows */}
+        {/* Role — dropdown modal */}
         <View style={s.inputGroup}>
           <Text style={s.inputLabel}>I am a…</Text>
-          <View style={s.roleSelector}>
-            {ROLE_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  s.roleOption,
-                  role === option.value && s.roleOptionSelected,
-                ]}
-                onPress={() => setRole(option.value)}
-                activeOpacity={0.7}
-                accessibilityLabel={option.label}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: role === option.value }}
-              >
-                <Text
-                  style={[
-                    s.roleOptionText,
-                    role === option.value && s.roleOptionTextSelected,
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <RoleDropdown
+            selectedRole={role}
+            onSelect={setRole}
+            disabled={isLoading}
+          />
         </View>
 
         {/* Submit */}
@@ -385,6 +569,7 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
   if (isDesktop) {
     return (
       <SafeAreaView style={s.safeArea}>
+        {navbar}
         <KeyboardAvoidingView
           style={s.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -461,6 +646,7 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <SafeAreaView style={s.safeArea}>
+      {navbar}
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -471,19 +657,6 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo wordmark */}
-          <View style={s.logoRow}>
-            <Image
-              source={compassIcon}
-              style={s.logoImage}
-              accessibilityIgnoresInvertColors
-              accessibilityLabel="Compass icon"
-            />
-            <Text style={s.wordmark}>
-              Compass<Text style={s.wordmarkAccent}>CHW</Text>
-            </Text>
-          </View>
-
           {/* Hero copy */}
           <View style={s.heroSection}>
             <View style={s.eyebrowRow}>
@@ -535,6 +708,77 @@ const s = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+
+  // ── Navbar ────────────────────────────────────────────────────────────────
+  navbar: {
+    height: 64,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    elevation: 2,
+    zIndex: 10,
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.foreground,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+      },
+    }),
+  },
+  navbarDesktop: {
+    height: 72,
+  },
+  navbarInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+  },
+  navbarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  navLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+  },
+  navWordmark: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: colors.foreground,
+    letterSpacing: -0.4,
+  },
+  navWordmarkAccent: {
+    color: colors.secondary,
+  },
+  navLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xl,
+  },
+  navLinkText: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.mutedForeground,
+    letterSpacing: 0.1,
+  },
+  navHomeButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  navHomeButtonText: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 13,
+    color: colors.foreground,
+    letterSpacing: 0.1,
   },
 
   // ── Mobile scroll layout ───────────────────────────────────────────────────
@@ -729,30 +973,92 @@ const s = StyleSheet.create({
     color: colors.foreground,
   },
 
-  // ── Role selector ─────────────────────────────────────────────────────────
-  roleSelector: {
-    gap: spacing.sm,
-  },
-  roleOption: {
+  // ── Role dropdown trigger ─────────────────────────────────────────────────
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: `${colors.muted}4D`,
-    paddingVertical: 14,
     paddingHorizontal: spacing.md,
+    paddingVertical: 14,
   },
-  roleOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}0D`,
+  dropdownTriggerDisabled: {
+    opacity: 0.5,
   },
-  roleOptionText: {
+  dropdownTriggerText: {
     fontFamily: fonts.body,
     fontSize: 14,
-    color: colors.mutedForeground,
+    color: `${colors.mutedForeground}88`,
+    flex: 1,
+    marginRight: spacing.sm,
   },
-  roleOptionTextSelected: {
+  dropdownTriggerTextSelected: {
+    color: colors.foreground,
+  },
+
+  // ── Role dropdown modal ───────────────────────────────────────────────────
+  modalScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radii.xl,
+    width: '100%',
+    maxWidth: 400,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 12,
+      },
+    }),
+  },
+  modalTitle: {
+    fontFamily: fonts.display,
+    fontSize: 16,
+    color: colors.foreground,
+    letterSpacing: -0.2,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md + 2,
+  },
+  modalOptionBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalOptionSelected: {
+    backgroundColor: `${colors.primary}08`,
+  },
+  modalOptionText: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.foreground,
+    flex: 1,
+  },
+  modalOptionTextSelected: {
     fontFamily: fonts.bodySemibold,
     color: colors.primary,
+  },
+  modalOptionCheck: {
+    marginLeft: spacing.sm,
   },
 
   // ── Submit button ─────────────────────────────────────────────────────────
