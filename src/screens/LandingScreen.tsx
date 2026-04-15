@@ -224,7 +224,7 @@ const STATS: Stat[] = [
 // ─── Hero stats (floating card on hero image) ─────────────────────────────────
 
 const HERO_STATS = [
-  { label: 'MEDI-CAL MEMBERS IN NEED', value: '3M+' },
+  { label: 'MEDI-CAL MEMBERS', value: '3M+', sublabel: 'IN NEED' },
   { label: 'AVG. EARNINGS', value: '$32/hour' },
   { label: 'MEMBER COST', value: '$0' },
 ];
@@ -719,6 +719,9 @@ export function LandingScreen(): React.JSX.Element {
                         <View style={staticStyles.heroStatItem}>
                           <Text style={staticStyles.heroStatLabel}>{stat.label}</Text>
                           <Text style={staticStyles.heroStatValue}>{stat.value}</Text>
+                          {stat.sublabel && (
+                            <Text style={staticStyles.heroStatSublabel}>{stat.sublabel}</Text>
+                          )}
                         </View>
                         {index < HERO_STATS.length - 1 && (
                           <View style={staticStyles.heroStatDivider} />
@@ -1571,7 +1574,8 @@ const staticStyles = StyleSheet.create({
     borderRadius: radii.xl,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    justifyContent: 'center',
+    paddingVertical: 22,
     paddingHorizontal: 20,
     gap: 0,
     ...Platform.select({
@@ -1587,26 +1591,36 @@ const staticStyles = StyleSheet.create({
   heroStatItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
+    gap: 4,
   },
   heroStatLabel: {
     fontFamily: fonts.bodySemibold,
-    fontSize: 9,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.75)',
     textTransform: 'uppercase',
     textAlign: 'center',
   },
   heroStatValue: {
     fontFamily: fonts.display,
-    fontSize: 18,
+    fontSize: 28,
     color: '#FFFFFF',
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
+    textAlign: 'center',
+    lineHeight: 32,
+  },
+  heroStatSublabel: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.75)',
+    textTransform: 'uppercase',
     textAlign: 'center',
   },
   heroStatDivider: {
     width: 1,
-    height: 40,
+    height: 60,
     backgroundColor: 'rgba(255,255,255,0.2)',
     marginHorizontal: 4,
   },
