@@ -587,7 +587,7 @@ export function LandingScreen(): React.JSX.Element {
               staticStyles.heroContent,
               {
                 paddingTop: isDesktop ? 56 : spacing.xl,
-                paddingBottom: isDesktop ? 96 : spacing.xxl,
+                paddingBottom: isDesktop ? 48 : spacing.lg,
                 paddingHorizontal: isDesktop ? 48 : px,
               },
             ]}
@@ -738,7 +738,7 @@ export function LandingScreen(): React.JSX.Element {
         {/* ════════════════════════════════════════════════════════════════
             SECTION 2 — CLIENT SLIDER
         ════════════════════════════════════════════════════════════════ */}
-        <View style={[staticStyles.clientSliderSection, { paddingVertical: sectionPy }]}>
+        <View style={[staticStyles.clientSliderSection, { paddingVertical: sectionPy / 2 }]}>
           <Text style={staticStyles.clientSliderEyebrow}>Trusted Partners</Text>
           <Text
             style={[
@@ -769,7 +769,7 @@ export function LandingScreen(): React.JSX.Element {
         {/* ════════════════════════════════════════════════════════════════
             SECTION 3 — SERVICES
         ════════════════════════════════════════════════════════════════ */}
-        <View ref={servicesRef} style={[staticStyles.servicesSection, { paddingVertical: sectionPy }]}>
+        <View ref={servicesRef} style={[staticStyles.servicesSection, { paddingTop: sectionPy / 2, paddingBottom: sectionPy }]}>
           <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
             <Text style={[staticStyles.eyebrowLabel, staticStyles.eyebrowCentered]}>
               Service Areas
