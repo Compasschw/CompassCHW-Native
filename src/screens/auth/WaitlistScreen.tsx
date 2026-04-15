@@ -372,7 +372,7 @@ export function WaitlistScreen({ navigation }: Props): React.JSX.Element {
             {NAV_LINKS.map((link) => (
               <TouchableOpacity
                 key={link}
-                onPress={link === 'Home' ? handleNavigateHome : undefined}
+                onPress={handleNavigateHome}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={link}

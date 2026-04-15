@@ -400,6 +400,32 @@ export function LandingScreen(): React.JSX.Element {
 
   const heroContent = activeTab === 'chw' ? CHW_HERO : MEMBER_HERO;
 
+  // ── Scroll refs ──────────────────────────────────────────────────────────────
+  const scrollViewRef = useRef<ScrollView>(null);
+  const servicesRef = useRef<View>(null);
+  const howItWorksRef = useRef<View>(null);
+  const forCHWsRef = useRef<View>(null);
+
+  const scrollToTop = useCallback((): void => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
+
+  const scrollToSection = useCallback((ref: React.RefObject<View | null>): void => {
+    if (!ref.current || !scrollViewRef.current) return;
+    ref.current.measureLayout(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (scrollViewRef.current as any).getInnerViewNode
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (scrollViewRef.current as any).getInnerViewNode()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        : (scrollViewRef.current as any),
+      (_x: number, y: number) => {
+        scrollViewRef.current?.scrollTo({ y: y - 80, animated: true });
+      },
+      () => {},
+    );
+  }, []);
+
   const handlePrimaryPress = useCallback((): void => {
     navigation.navigate(heroContent.primaryButtonRoute);
   }, [navigation, heroContent.primaryButtonRoute]);
@@ -447,6 +473,49 @@ export function LandingScreen(): React.JSX.Element {
               Compass<Text style={staticStyles.navWordmarkAccent}>CHW</Text>
             </Text>
           </View>
+
+          {/* Desktop-only center nav links */}
+          {isDesktop && (
+            <View style={staticStyles.navbarCenter}>
+              <TouchableOpacity
+                style={staticStyles.navLink}
+                onPress={scrollToTop}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Home"
+              >
+                <Text style={staticStyles.navLinkText}>Home</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={staticStyles.navLink}
+                onPress={() => scrollToSection(servicesRef)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Services"
+              >
+                <Text style={staticStyles.navLinkText}>Services</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={staticStyles.navLink}
+                onPress={() => scrollToSection(howItWorksRef)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="How It Works"
+              >
+                <Text style={staticStyles.navLinkText}>How It Works</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={staticStyles.navLink}
+                onPress={() => scrollToSection(forCHWsRef)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="For CHWs"
+              >
+                <Text style={staticStyles.navLinkText}>For CHWs</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <TouchableOpacity
             style={staticStyles.navJoinButton}
             onPress={handleWaitlistPress}
@@ -460,6 +529,7 @@ export function LandingScreen(): React.JSX.Element {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={staticStyles.scroll}
         contentContainerStyle={staticStyles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -691,7 +761,7 @@ export function LandingScreen(): React.JSX.Element {
         {/* ════════════════════════════════════════════════════════════════
             SECTION 3 — SERVICES
         ════════════════════════════════════════════════════════════════ */}
-        <View style={[staticStyles.servicesSection, { paddingVertical: sectionPy }]}>
+        <View ref={servicesRef} style={[staticStyles.servicesSection, { paddingVertical: sectionPy }]}>
           <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
             <Text style={[staticStyles.eyebrowLabel, staticStyles.eyebrowCentered]}>
               Service Areas
@@ -783,7 +853,7 @@ export function LandingScreen(): React.JSX.Element {
         {/* ════════════════════════════════════════════════════════════════
             SECTION 4 — HOW IT WORKS
         ════════════════════════════════════════════════════════════════ */}
-        <View style={[staticStyles.howItWorksSection, { paddingVertical: sectionPy }]}>
+        <View ref={howItWorksRef} style={[staticStyles.howItWorksSection, { paddingVertical: sectionPy }]}>
           <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
             <Text style={staticStyles.howEyebrow}>How It Works</Text>
             <Text
@@ -843,7 +913,7 @@ export function LandingScreen(): React.JSX.Element {
         {/* ════════════════════════════════════════════════════════════════
             SECTION 5 — FOR CHWs
         ════════════════════════════════════════════════════════════════ */}
-        <View style={[staticStyles.forChwsSection, { paddingVertical: sectionPy }]}>
+        <View ref={forCHWsRef} style={[staticStyles.forChwsSection, { paddingVertical: sectionPy }]}>
           <ContentWrapper isDesktop={isDesktop} style={{ paddingHorizontal: isDesktop ? 48 : px }}>
             <View
               style={[
@@ -1390,6 +1460,20 @@ const staticStyles = StyleSheet.create({
     fontSize: 13,
     color: '#FFFFFF',
     letterSpacing: 0.1,
+  },
+  navbarCenter: {
+    flexDirection: 'row',
+    gap: 32,
+    alignItems: 'center',
+  },
+  navLink: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  navLinkText: {
+    fontSize: 14,
+    fontFamily: fonts.body,
+    color: colors.mutedForeground,
   },
 
   // ── Scroll ──────────────────────────────────────────────────────────────────
