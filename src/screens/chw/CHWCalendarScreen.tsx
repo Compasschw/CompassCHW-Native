@@ -29,11 +29,13 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
   mockCalendarEvents,
-  sessions,
   verticalLabels,
   type CalendarEvent,
   type Vertical,
 } from '../../data/mock';
+import { useSessions, type SessionData } from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -92,7 +94,7 @@ function groupByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
  * Derives CalendarEvent records from the sessions array.
  * Sessions already represented in mockCalendarEvents are skipped.
  */
-function deriveSessionEvents(): CalendarEvent[] {
+function deriveSessionEvents(sessions: SessionData[]): CalendarEvent[] {
   const existingKeys = new Set<string>(
     mockCalendarEvents
       .filter((e) => e.type === 'session' && e.memberName)
@@ -118,11 +120,11 @@ function deriveSessionEvents(): CalendarEvent[] {
 
       return {
         id: `derived-${session.id}`,
-        title: `Session: ${session.memberName}`,
+        title: `Session: ${session.memberName ?? 'Member'}`,
         date,
         startTime: `${hh}:${min}`,
         endTime: `${endHour}:${min}`,
-        vertical: session.vertical,
+        vertical: session.vertical as Vertical | undefined,
         type: 'session' as const,
         chwName: session.chwName,
         memberName: session.memberName,
@@ -282,6 +284,8 @@ const TODAY_DAY = now.getDate();
  * CHW Calendar screen — monthly grid + tapped-day event detail panel.
  */
 export function CHWCalendarScreen(): React.JSX.Element {
+  const { data: rawSessions, isLoading, error, refetch } = useSessions();
+
   // Default to April 2026 to show mock data
   const [currentDate, setCurrentDate] = useState(new Date(2026, 3, 1));
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -290,9 +294,30 @@ export function CHWCalendarScreen(): React.JSX.Element {
   const month = currentDate.getMonth();
   const cells = useMemo(() => getMonthCells(year, month), [year, month]);
 
+  const allSessions = rawSessions ?? [];
+
   const allEvents = useMemo<CalendarEvent[]>(() => {
-    return [...mockCalendarEvents, ...deriveSessionEvents()];
-  }, []);
+    return [...mockCalendarEvents, ...deriveSessionEvents(allSessions)];
+  }, [allSessions]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+          <Text style={styles.pageTitle}>Calendar</Text>
+          <LoadingSkeleton variant="card" />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ErrorState message="Failed to load calendar" onRetry={() => void refetch()} />
+      </SafeAreaView>
+    );
+  }
 
   const eventsByDate = useMemo(() => groupByDate(allEvents), [allEvents]);
 

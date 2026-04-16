@@ -34,13 +34,19 @@ import {
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
-  serviceRequests,
   formatCurrency,
   MEDI_CAL_RATE,
   NET_PAYOUT_RATE,
-  type ServiceRequest,
   type Vertical,
 } from '../../data/mock';
+import {
+  useRequests,
+  useAcceptRequest,
+  usePassRequest,
+  type ServiceRequestData,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -116,7 +122,7 @@ function VerticalIconComponent({
 // ─── RequestCard sub-component ────────────────────────────────────────────────
 
 interface RequestCardProps {
-  request: ServiceRequest;
+  request: ServiceRequestData;
   onAccept: (id: string) => void;
   onPass: (id: string) => void;
 }
@@ -124,33 +130,33 @@ interface RequestCardProps {
 function RequestCard({ request, onAccept, onPass }: RequestCardProps): React.JSX.Element {
   const grossEarnings = request.estimatedUnits * MEDI_CAL_RATE;
   const netEarnings = parseFloat((grossEarnings * NET_PAYOUT_RATE).toFixed(2));
-  const verticalColor = VERTICAL_COLORS[request.vertical];
+  const verticalColor = VERTICAL_COLORS[request.vertical as Vertical] ?? '#6B7A6B';
 
   return (
     <View style={cardStyles.card}>
       {/* Header row */}
       <View style={cardStyles.headerRow}>
         <View style={[cardStyles.iconCircle, { backgroundColor: verticalColor + '18' }]}>
-          <VerticalIconComponent vertical={request.vertical} size={18} />
+          <VerticalIconComponent vertical={request.vertical as Vertical} size={18} />
         </View>
         <View style={cardStyles.headerContent}>
           <View style={cardStyles.badgeRow}>
             <Text style={cardStyles.memberName}>{request.memberName}</Text>
             <View style={[cardStyles.badge, { backgroundColor: verticalColor + '18' }]}>
               <Text style={[cardStyles.badgeText, { color: verticalColor }]}>
-                {VERTICAL_LABELS[request.vertical]}
+                {VERTICAL_LABELS[request.vertical as Vertical] ?? request.vertical}
               </Text>
             </View>
             <View
               style={[
                 cardStyles.badge,
-                { backgroundColor: URGENCY_COLORS[request.urgency] + '18' },
+                { backgroundColor: (URGENCY_COLORS[request.urgency] ?? '#6B7A6B') + '18' },
               ]}
             >
               <Text
-                style={[cardStyles.badgeText, { color: URGENCY_COLORS[request.urgency] }]}
+                style={[cardStyles.badgeText, { color: URGENCY_COLORS[request.urgency] ?? '#6B7A6B' }]}
               >
-                {URGENCY_LABELS[request.urgency]}
+                {URGENCY_LABELS[request.urgency] ?? request.urgency}
               </Text>
             </View>
           </View>
@@ -346,21 +352,21 @@ const cardStyles = StyleSheet.create({
 export function CHWRequestsScreen(): React.JSX.Element {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
-  // Track accepted vs passed IDs separately for summary stats
-  const [acceptedIds, setAcceptedIds] = useState<Set<string>>(new Set());
-  const [passedIds, setPassedIds] = useState<Set<string>>(new Set());
+  const { data: rawRequests, isLoading, error, refetch } = useRequests();
+  const acceptRequest = useAcceptRequest();
+  const passRequest = usePassRequest();
 
-  const dismissedIds = useMemo(
-    () => new Set([...acceptedIds, ...passedIds]),
-    [acceptedIds, passedIds],
+  // Track session-local accepted/passed counts for the summary stat row.
+  // The API handles actual status transitions; these just reflect in-session actions.
+  const [acceptedCount, setAcceptedCount] = useState(0);
+  const [passedCount, setPassedCount] = useState(0);
+
+  const allOpenRequests = useMemo<ServiceRequestData[]>(
+    () => (rawRequests ?? []).filter((r) => r.status === 'open'),
+    [rawRequests],
   );
 
-  const allOpenRequests = useMemo<ServiceRequest[]>(
-    () => serviceRequests.filter((r) => r.status === 'open' && !dismissedIds.has(r.id)),
-    [dismissedIds],
-  );
-
-  const filteredRequests = useMemo<ServiceRequest[]>(
+  const filteredRequests = useMemo<ServiceRequestData[]>(
     () =>
       activeFilter === 'all'
         ? allOpenRequests
@@ -368,18 +374,43 @@ export function CHWRequestsScreen(): React.JSX.Element {
     [activeFilter, allOpenRequests],
   );
 
-  const handleAccept = useCallback((id: string) => {
-    setAcceptedIds((prev) => new Set([...prev, id]));
-  }, []);
+  const handleAccept = useCallback(async (id: string): Promise<void> => {
+    await acceptRequest.mutateAsync(id);
+    setAcceptedCount((prev) => prev + 1);
+  }, [acceptRequest]);
 
-  const handlePass = useCallback((id: string) => {
-    setPassedIds((prev) => new Set([...prev, id]));
-  }, []);
+  const handlePass = useCallback(async (id: string): Promise<void> => {
+    await passRequest.mutateAsync(id);
+    setPassedCount((prev) => prev + 1);
+  }, [passRequest]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.headerBlock}>
+          <View style={styles.titleRow}>
+            <Text style={styles.pageTitle}>Open Requests</Text>
+          </View>
+        </View>
+        <View style={styles.listContent}>
+          <LoadingSkeleton variant="rows" rows={4} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ErrorState message="Failed to load requests" onRetry={() => void refetch()} />
+      </SafeAreaView>
+    );
+  }
 
   const tabCount = useCallback(
     (key: FilterTab): number => {
       if (key === 'all') return allOpenRequests.length;
-      return allOpenRequests.filter((r) => r.vertical === key).length;
+      return allOpenRequests.filter((r) => r.vertical === (key as string)).length;
     },
     [allOpenRequests],
   );
@@ -410,14 +441,14 @@ export function CHWRequestsScreen(): React.JSX.Element {
             <View style={[styles.statSummaryIcon, { backgroundColor: colors.secondary + '18' }]}>
               <CheckCircle size={14} color={colors.secondary} />
             </View>
-            <Text style={styles.statSummaryValue}>{acceptedIds.size}</Text>
+            <Text style={styles.statSummaryValue}>{acceptedCount}</Text>
             <Text style={styles.statSummaryLabel}>Accepted</Text>
           </View>
           <View style={[styles.statSummaryCard, { borderColor: colors.destructive + '40' }]}>
             <View style={[styles.statSummaryIcon, { backgroundColor: colors.destructive + '18' }]}>
               <ThumbsDown size={14} color={colors.destructive} />
             </View>
-            <Text style={styles.statSummaryValue}>{passedIds.size}</Text>
+            <Text style={styles.statSummaryValue}>{passedCount}</Text>
             <Text style={styles.statSummaryLabel}>Passed</Text>
           </View>
         </View>
@@ -455,7 +486,11 @@ export function CHWRequestsScreen(): React.JSX.Element {
           data={filteredRequests}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <RequestCard request={item} onAccept={handleAccept} onPass={handlePass} />
+            <RequestCard
+              request={item}
+              onAccept={(id) => void handleAccept(id)}
+              onPass={(id) => void handlePass(id)}
+            />
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

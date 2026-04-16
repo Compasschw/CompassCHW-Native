@@ -32,14 +32,18 @@ import {
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
-  earningsSummary,
-  sessions,
   formatCurrency,
   MEDI_CAL_RATE,
   sessionModeLabels,
-  type Session,
   type Vertical,
 } from '../../data/mock';
+import {
+  useChwEarnings,
+  useSessions,
+  type SessionData,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Earnings scenario constants ─────────────────────────────────────────────
 
@@ -147,15 +151,48 @@ function VerticalIconComponent({
  * CHW Earnings screen — tracks Medi-Cal reimbursements and payout history.
  */
 export function CHWEarningsScreen(): React.JSX.Element {
-  const completedSessions = useMemo<Session[]>(
-    () => sessions.filter((s) => s.status === 'completed'),
-    [],
+  const earningsQuery = useChwEarnings();
+  const sessionsQuery = useSessions();
+
+  const isLoading = earningsQuery.isLoading || sessionsQuery.isLoading;
+  const queryError = earningsQuery.error ?? sessionsQuery.error;
+
+  const handleRetry = () => {
+    void earningsQuery.refetch();
+    void sessionsQuery.refetch();
+  };
+
+  const earnings = earningsQuery.data;
+  const allSessions = sessionsQuery.data ?? [];
+
+  const completedSessions = useMemo<SessionData[]>(
+    () => allSessions.filter((s) => s.status === 'completed'),
+    [allSessions],
   );
 
   const maxBarAmount = useMemo(
     () => Math.max(...WEEKLY_DATA.map((d) => d.amount), 1),
     [],
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+          <LoadingSkeleton variant="stat-grid" />
+          <LoadingSkeleton variant="rows" rows={3} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (queryError) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ErrorState message="Failed to load earnings" onRetry={handleRetry} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -178,10 +215,10 @@ export function CHWEarningsScreen(): React.JSX.Element {
             <View style={[styles.statIconCircle, { backgroundColor: colors.primary + '18' }]}>
               <DollarSign size={18} color={colors.primary} />
             </View>
-            <Text style={styles.statValue}>{formatCurrency(earningsSummary.thisWeek)}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
+            <Text style={styles.statValue}>{formatCurrency(earnings?.pendingPayout ?? 0)}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
             <Text style={styles.statSubtext}>
-              {earningsSummary.sessionsThisWeek} sessions
+              {earnings?.sessionsThisWeek ?? 0} sessions this week
             </Text>
           </View>
 
@@ -189,7 +226,7 @@ export function CHWEarningsScreen(): React.JSX.Element {
             <View style={[styles.statIconCircle, { backgroundColor: colors.secondary + '18' }]}>
               <TrendingUp size={18} color={colors.secondary} />
             </View>
-            <Text style={styles.statValue}>{formatCurrency(earningsSummary.thisMonth)}</Text>
+            <Text style={styles.statValue}>{formatCurrency(earnings?.thisMonth ?? 0)}</Text>
             <Text style={styles.statLabel}>This Month</Text>
             <Text style={styles.statSubtext}>+8% vs last month</Text>
           </View>
@@ -198,10 +235,10 @@ export function CHWEarningsScreen(): React.JSX.Element {
             <View style={[styles.statIconCircle, { backgroundColor: colors.compassGold + '18' }]}>
               <CalendarCheck size={18} color={colors.compassGold} />
             </View>
-            <Text style={styles.statValue}>{formatCurrency(earningsSummary.allTime)}</Text>
+            <Text style={styles.statValue}>{formatCurrency(earnings?.allTime ?? 0)}</Text>
             <Text style={styles.statLabel}>All Time</Text>
             <Text style={styles.statSubtext}>
-              {earningsSummary.avgRating.toFixed(1)} avg rating
+              {earnings?.avgRating.toFixed(1) ?? '—'} avg rating
             </Text>
           </View>
         </View>
@@ -249,6 +286,7 @@ export function CHWEarningsScreen(): React.JSX.Element {
             completedSessions.map((session, index) => {
               const payoutStatus = derivePayoutStatus(session.id);
               const statusColor = PAYOUT_STATUS_COLORS[payoutStatus];
+              const verticalColor = VERTICAL_COLORS[session.vertical as Vertical] ?? '#6B7A6B';
               return (
                 <View key={session.id}>
                   {index > 0 ? <View style={styles.divider} /> : null}
@@ -256,10 +294,10 @@ export function CHWEarningsScreen(): React.JSX.Element {
                     <View
                       style={[
                         styles.payoutIconCircle,
-                        { backgroundColor: VERTICAL_COLORS[session.vertical] + '18' },
+                        { backgroundColor: verticalColor + '18' },
                       ]}
                     >
-                      <VerticalIconComponent vertical={session.vertical} size={16} />
+                      <VerticalIconComponent vertical={session.vertical as Vertical} size={16} />
                     </View>
                     <View style={styles.payoutInfo}>
                       <Text style={styles.payoutMemberName} numberOfLines={1}>
@@ -271,7 +309,7 @@ export function CHWEarningsScreen(): React.JSX.Element {
                           ? ` · ${session.unitsBilled} ${session.unitsBilled === 1 ? 'unit' : 'units'}`
                           : ''}
                         {' · '}
-                        {sessionModeLabels[session.mode]}
+                        {sessionModeLabels[session.mode as keyof typeof sessionModeLabels] ?? session.mode}
                       </Text>
                     </View>
                     <View style={styles.payoutRight}>

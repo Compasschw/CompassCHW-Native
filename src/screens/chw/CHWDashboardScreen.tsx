@@ -34,16 +34,20 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { useAuth } from '../../context/AuthContext';
 import {
-  earningsSummary,
-  sessions,
-  serviceRequests,
   formatCurrency,
   MEDI_CAL_RATE,
   NET_PAYOUT_RATE,
   type Vertical,
-  type Session,
-  type ServiceRequest,
 } from '../../data/mock';
+import {
+  useChwEarnings,
+  useSessions,
+  useRequests,
+  type SessionData,
+  type ServiceRequestData,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Vertical helpers ─────────────────────────────────────────────────────────
 
@@ -145,20 +149,56 @@ export function CHWDashboardScreen(): React.JSX.Element {
   const { userName } = useAuth();
   const firstName = userName?.split(' ')[0] ?? 'there';
 
-  const openRequests = useMemo<ServiceRequest[]>(
-    () => serviceRequests.filter((r) => r.status === 'open'),
-    [],
+  const earningsQuery = useChwEarnings();
+  const sessionsQuery = useSessions();
+  const requestsQuery = useRequests();
+
+  const isLoading = earningsQuery.isLoading || sessionsQuery.isLoading || requestsQuery.isLoading;
+  const queryError = earningsQuery.error ?? sessionsQuery.error ?? requestsQuery.error;
+
+  const handleRetry = () => {
+    void earningsQuery.refetch();
+    void sessionsQuery.refetch();
+    void requestsQuery.refetch();
+  };
+
+  const earnings = earningsQuery.data;
+  const allSessions = sessionsQuery.data ?? [];
+  const allRequests = requestsQuery.data ?? [];
+
+  const openRequests = useMemo<ServiceRequestData[]>(
+    () => allRequests.filter((r) => r.status === 'open'),
+    [allRequests],
   );
 
-  const upcomingSession = useMemo<Session | undefined>(
-    () => sessions.find((s) => s.status === 'scheduled'),
-    [],
+  const upcomingSession = useMemo<SessionData | undefined>(
+    () => allSessions.find((s) => s.status === 'scheduled'),
+    [allSessions],
   );
 
-  const recentRequests = useMemo<ServiceRequest[]>(
+  const recentRequests = useMemo<ServiceRequestData[]>(
     () => openRequests.slice(0, 3),
     [openRequests],
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+          <LoadingSkeleton variant="stat-grid" />
+          <LoadingSkeleton variant="rows" rows={2} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (queryError) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ErrorState message="Failed to load dashboard" onRetry={handleRetry} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -184,21 +224,21 @@ export function CHWDashboardScreen(): React.JSX.Element {
             icon={<DollarSign size={20} color={colors.primary} />}
             iconBg={colors.primary + '18'}
             label="This Month"
-            value={formatCurrency(earningsSummary.thisMonth)}
-            subtext={`${formatCurrency(earningsSummary.pendingPayout)} pending`}
+            value={earnings ? formatCurrency(earnings.thisMonth) : '$0.00'}
+            subtext={earnings ? `${formatCurrency(earnings.pendingPayout)} pending` : ''}
           />
           <StatCard
             icon={<Star size={20} color={colors.compassGold} />}
             iconBg={colors.compassGold + '18'}
             label="Avg Rating"
-            value={earningsSummary.avgRating.toFixed(1)}
+            value={earnings ? earnings.avgRating.toFixed(1) : '—'}
             subtext="From reviews"
           />
           <StatCard
             icon={<CalendarCheck size={20} color={colors.secondary} />}
             iconBg={colors.secondary + '18'}
             label="Sessions"
-            value={earningsSummary.sessionsThisWeek}
+            value={earnings ? earnings.sessionsThisWeek : 0}
             subtext="This week"
           />
           <StatCard
@@ -219,26 +259,26 @@ export function CHWDashboardScreen(): React.JSX.Element {
                 <View
                   style={[
                     styles.verticalIconCircle,
-                    { backgroundColor: VERTICAL_COLORS[upcomingSession.vertical] + '18' },
+                    { backgroundColor: (VERTICAL_COLORS[upcomingSession.vertical as Vertical] ?? '#6B7A6B') + '18' },
                   ]}
                 >
-                  <VerticalIconComponent vertical={upcomingSession.vertical} size={20} />
+                  <VerticalIconComponent vertical={upcomingSession.vertical as Vertical} size={20} />
                 </View>
                 <View style={styles.sessionInfo}>
                   <View style={styles.badgeRow}>
                     <View
                       style={[
                         styles.badge,
-                        { backgroundColor: VERTICAL_COLORS[upcomingSession.vertical] + '18' },
+                        { backgroundColor: (VERTICAL_COLORS[upcomingSession.vertical as Vertical] ?? '#6B7A6B') + '18' },
                       ]}
                     >
                       <Text
                         style={[
                           styles.badgeText,
-                          { color: VERTICAL_COLORS[upcomingSession.vertical] },
+                          { color: VERTICAL_COLORS[upcomingSession.vertical as Vertical] ?? '#6B7A6B' },
                         ]}
                       >
-                        {VERTICAL_LABELS[upcomingSession.vertical]}
+                        {VERTICAL_LABELS[upcomingSession.vertical as Vertical] ?? upcomingSession.vertical}
                       </Text>
                     </View>
                     <View style={[styles.badge, { backgroundColor: colors.secondary + '18' }]}>
@@ -273,10 +313,10 @@ export function CHWDashboardScreen(): React.JSX.Element {
                     <View
                       style={[
                         styles.verticalIconCircle,
-                        { backgroundColor: VERTICAL_COLORS[request.vertical] + '18' },
+                        { backgroundColor: (VERTICAL_COLORS[request.vertical as Vertical] ?? '#6B7A6B') + '18' },
                       ]}
                     >
-                      <VerticalIconComponent vertical={request.vertical} size={18} />
+                      <VerticalIconComponent vertical={request.vertical as Vertical} size={18} />
                     </View>
                     <View style={styles.requestInfo}>
                       <View style={styles.badgeRow}>
@@ -285,17 +325,17 @@ export function CHWDashboardScreen(): React.JSX.Element {
                           style={[
                             styles.badge,
                             {
-                              backgroundColor: URGENCY_COLORS[request.urgency] + '18',
+                              backgroundColor: (URGENCY_COLORS[request.urgency] ?? '#6B7A6B') + '18',
                             },
                           ]}
                         >
                           <Text
                             style={[
                               styles.badgeText,
-                              { color: URGENCY_COLORS[request.urgency] },
+                              { color: URGENCY_COLORS[request.urgency] ?? '#6B7A6B' },
                             ]}
                           >
-                            {URGENCY_LABELS[request.urgency]}
+                            {URGENCY_LABELS[request.urgency] ?? request.urgency}
                           </Text>
                         </View>
                       </View>
@@ -303,7 +343,7 @@ export function CHWDashboardScreen(): React.JSX.Element {
                         {request.description}
                       </Text>
                       <Text style={styles.sessionMeta}>
-                        {SESSION_MODE_LABELS[request.preferredMode]}
+                        {SESSION_MODE_LABELS[request.preferredMode] ?? request.preferredMode}
                         {' · '}~{request.estimatedUnits} units
                         {' · '}
                         {formatCurrency(

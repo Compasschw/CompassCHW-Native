@@ -39,15 +39,22 @@ import {
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
-  sessions,
   formatCurrency,
   sessionModeLabels,
   sessionStatusLabels,
-  type Session,
   type SessionStatus,
   type Vertical,
   type SessionDocumentation,
 } from '../../data/mock';
+import {
+  useSessions,
+  useStartSession,
+  useCompleteSession,
+  useSubmitDocumentation,
+  type SessionData,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 import { DocumentationModal } from '../../components/sessions/DocumentationModal';
 import { SessionChat } from '../../components/sessions/SessionChat';
 
@@ -262,7 +269,7 @@ const consentStyles = StyleSheet.create({
 // ─── SessionCard sub-component ────────────────────────────────────────────────
 
 interface SessionCardProps {
-  session: Session;
+  session: SessionData;
   /** Unix ms timestamp for when session entered in_progress status */
   startedAtMs?: number;
   /** Whether consent checkbox has been checked for this session */
@@ -284,8 +291,8 @@ function SessionCard({
   onDocumentSession,
   onOpenChat,
 }: SessionCardProps): React.JSX.Element {
-  const verticalColor = VERTICAL_COLORS[session.vertical];
-  const statusColor = SESSION_STATUS_COLORS[session.status];
+  const verticalColor = VERTICAL_COLORS[session.vertical as Vertical] ?? '#6B7A6B';
+  const statusColor = SESSION_STATUS_COLORS[session.status as SessionStatus] ?? colors.mutedForeground;
   const billingStatus = deriveBillingStatus(session.id);
 
   const isScheduled = session.status === 'scheduled';
@@ -298,14 +305,14 @@ function SessionCard({
       {/* Header */}
       <View style={cardStyles.headerRow}>
         <View style={[cardStyles.iconCircle, { backgroundColor: verticalColor + '18' }]}>
-          <VerticalIconComponent vertical={session.vertical} size={20} />
+          <VerticalIconComponent vertical={session.vertical as Vertical} size={20} />
         </View>
         <View style={cardStyles.headerInfo}>
           <View style={cardStyles.badgeRow}>
             <Text style={cardStyles.memberName}>{session.memberName}</Text>
             <View style={[cardStyles.badge, { backgroundColor: statusColor + '18' }]}>
               <Text style={[cardStyles.badgeText, { color: statusColor }]}>
-                {sessionStatusLabels[session.status]}
+                {sessionStatusLabels[session.status as SessionStatus] ?? session.status}
               </Text>
             </View>
             {/* Live timer for in-progress sessions */}
@@ -316,7 +323,7 @@ function SessionCard({
           <Text style={cardStyles.meta}>
             {formatScheduledAt(session.scheduledAt)}
             {' · '}
-            {sessionModeLabels[session.mode]}
+            {sessionModeLabels[session.mode as keyof typeof sessionModeLabels] ?? session.mode}
           </Text>
         </View>
       </View>
@@ -667,10 +674,13 @@ type SessionTab = 'active' | 'completed';
 export function CHWSessionsScreen(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<SessionTab>('active');
 
-  // Optimistic status overrides: sessionId → new status
-  const [statusOverrides, setStatusOverrides] = useState<Record<string, SessionStatus>>({});
+  const { data: rawSessions, isLoading, error, refetch } = useSessions();
+  const startSession = useStartSession();
+  const completeSession = useCompleteSession();
+  const submitDocumentation = useSubmitDocumentation();
 
-  // Tracks when sessions went in_progress (for live timer)
+  // Tracks when sessions went in_progress locally (for live timer).
+  // The API handles the actual status; this is just for the timer UX.
   const startTimestamps = useRef<Record<string, number>>({});
 
   // Consent checkbox state per session
@@ -682,20 +692,14 @@ export function CHWSessionsScreen(): React.JSX.Element {
   // Chat modal state
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
 
-  const allSessions = useMemo<Session[]>(
-    () =>
-      sessions.map((s) =>
-        statusOverrides[s.id] ? { ...s, status: statusOverrides[s.id] } : s,
-      ),
-    [statusOverrides],
-  );
+  const allSessions = rawSessions ?? [];
 
-  const activeSessions = useMemo<Session[]>(
+  const activeSessions = useMemo<SessionData[]>(
     () => allSessions.filter((s) => s.status === 'scheduled' || s.status === 'in_progress'),
     [allSessions],
   );
 
-  const completedSessions = useMemo<Session[]>(
+  const completedSessions = useMemo<SessionData[]>(
     () => allSessions.filter((s) => s.status === 'completed'),
     [allSessions],
   );
@@ -708,14 +712,13 @@ export function CHWSessionsScreen(): React.JSX.Element {
 
   const handleStart = useCallback((id: string): void => {
     startTimestamps.current[id] = Date.now();
-    setStatusOverrides((prev) => ({ ...prev, [id]: 'in_progress' }));
-  }, []);
+    void startSession.mutateAsync(id);
+  }, [startSession]);
 
   const handleComplete = useCallback((id: string): void => {
-    setStatusOverrides((prev) => ({ ...prev, [id]: 'completed' }));
-    // Auto-switch to completed tab after completing
+    void completeSession.mutateAsync(id);
     setActiveTab('completed');
-  }, []);
+  }, [completeSession]);
 
   const handleDocumentSession = useCallback((id: string): void => {
     setDocumentingSessionId(id);
@@ -723,10 +726,15 @@ export function CHWSessionsScreen(): React.JSX.Element {
 
   const handleDocumentationSubmit = useCallback(
     (data: SessionDocumentation): void => {
-      // In production: persist to API. For demo, just close the modal.
+      if (documentingSessionId != null) {
+        void submitDocumentation.mutateAsync({
+          sessionId: documentingSessionId,
+          data: data as unknown as Record<string, unknown>,
+        });
+      }
       setDocumentingSessionId(null);
     },
-    [],
+    [documentingSessionId, submitDocumentation],
   );
 
   const handleOpenChat = useCallback((id: string): void => {
@@ -734,7 +742,7 @@ export function CHWSessionsScreen(): React.JSX.Element {
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: Session }) => (
+    ({ item }: { item: SessionData }) => (
       <SessionCard
         session={item}
         startedAtMs={
@@ -757,6 +765,27 @@ export function CHWSessionsScreen(): React.JSX.Element {
       handleOpenChat,
     ],
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.headerBlock}>
+          <Text style={styles.pageTitle}>Sessions</Text>
+        </View>
+        <View style={styles.listContent}>
+          <LoadingSkeleton variant="rows" rows={3} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ErrorState message="Failed to load sessions" onRetry={() => void refetch()} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -789,7 +818,7 @@ export function CHWSessionsScreen(): React.JSX.Element {
 
       {/* Session list */}
       {displayedSessions.length > 0 ? (
-        <FlatList
+        <FlatList<SessionData>
           data={displayedSessions}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}

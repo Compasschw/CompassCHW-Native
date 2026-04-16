@@ -15,7 +15,7 @@
  *  - "Save" commits draft to profile state; "Cancel" reverts to previous.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -49,12 +49,18 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { useAuth } from '../../context/AuthContext';
 import {
-  chwProfiles,
   mockCredentials,
   type Vertical,
   type Credential,
   type CredentialStatus,
 } from '../../data/mock';
+import {
+  useChwProfile,
+  useUpdateChwProfile,
+  type ChwProfile,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -296,61 +302,69 @@ const editFieldStyles = StyleSheet.create({
  * Supports inline editing via a draft state pattern.
  */
 export function CHWProfileScreen(): React.JSX.Element {
-  const { logout } = useAuth();
+  const { logout, userName } = useAuth();
 
-  const baseProfile = chwProfiles[0];
+  const { data: apiProfile, isLoading, error, refetch } = useChwProfile();
+  const updateProfile = useUpdateChwProfile();
 
-  // Committed profile state (what gets "saved")
-  const [profile, setProfile] = useState(baseProfile);
-  const [isAvailable, setIsAvailable] = useState(baseProfile.isAvailable);
+  // Derive display name from auth context (API profile has no name field)
+  const displayName = userName ?? 'My Profile';
+  const nameParts = displayName.split(' ');
+  const avatarInitials = nameParts
+    .slice(0, 2)
+    .map((p) => p[0] ?? '')
+    .join('')
+    .toUpperCase();
+
+  // Local availability state synced from API on mount
+  const [isAvailable, setIsAvailable] = useState(apiProfile?.isAvailable ?? true);
+  useEffect(() => {
+    if (apiProfile != null) {
+      setIsAvailable(apiProfile.isAvailable);
+    }
+  }, [apiProfile]);
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
 
   /**
-   * Build a draft from the current profile's name split on first space.
+   * Build a draft from the current API profile.
    */
-  function buildDraft(p: typeof baseProfile): ProfileDraft {
-    const nameParts = p.name.split(' ');
-    const firstName = nameParts[0] ?? '';
-    const lastName = nameParts.slice(1).join(' ');
+  function buildDraft(p: ChwProfile | undefined): ProfileDraft {
+    const authNameParts = displayName.split(' ');
     return {
-      firstName,
-      lastName,
+      firstName: authNameParts[0] ?? '',
+      lastName: authNameParts.slice(1).join(' '),
       phone: '(213) 555-0192',
       email: 'maria.reyes@compasschw.org',
-      zipCode: p.zipCode,
-      bio: p.bio,
-      specializations: [...p.specializations],
-      languages: [...p.languages],
+      zipCode: p?.zipCode ?? '',
+      bio: p?.bio ?? '',
+      specializations: [...(p?.specializations ?? [])] as Vertical[],
+      languages: [...(p?.languages ?? [])],
     };
   }
 
-  const [draft, setDraft] = useState<ProfileDraft>(() => buildDraft(baseProfile));
+  const [draft, setDraft] = useState<ProfileDraft>(() => buildDraft(apiProfile));
 
   const handleEditPress = useCallback(() => {
-    setDraft(buildDraft(profile));
+    setDraft(buildDraft(apiProfile));
     setIsEditing(true);
-  }, [profile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiProfile]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
   }, []);
 
   const handleSave = useCallback(() => {
-    const updatedName = [draft.firstName.trim(), draft.lastName.trim()]
-      .filter(Boolean)
-      .join(' ');
-    setProfile((prev) => ({
-      ...prev,
-      name: updatedName || prev.name,
-      zipCode: draft.zipCode.trim() || prev.zipCode,
-      bio: draft.bio.trim() || prev.bio,
+    void updateProfile.mutateAsync({
+      zipCode: draft.zipCode.trim() || apiProfile?.zipCode,
+      bio: draft.bio.trim() || apiProfile?.bio,
       specializations: draft.specializations,
       languages: draft.languages,
-    }));
+    });
     setIsEditing(false);
-  }, [draft]);
+  }, [draft, apiProfile, updateProfile]);
 
   const handleToggleSpecialization = useCallback((vertical: Vertical) => {
     setDraft((prev) => {
@@ -386,7 +400,8 @@ export function CHWProfileScreen(): React.JSX.Element {
 
   const handleToggleAvailability = useCallback((value: boolean) => {
     setIsAvailable(value);
-  }, []);
+    void updateProfile.mutateAsync({ isAvailable: value });
+  }, [updateProfile]);
 
   const handleSignOut = useCallback(async () => {
     await logout();
@@ -394,6 +409,28 @@ export function CHWProfileScreen(): React.JSX.Element {
 
   const displayEmail = 'maria.reyes@compasschw.org';
   const displayPhone = '(213) 555-0192';
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Profile</Text>
+        </View>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+          <LoadingSkeleton variant="card" />
+          <LoadingSkeleton variant="rows" rows={4} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ErrorState message="Failed to load profile" onRetry={() => void refetch()} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -452,7 +489,7 @@ export function CHWProfileScreen(): React.JSX.Element {
               disabled={!isEditing}
             >
               <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitials}>{profile.avatar}</Text>
+                <Text style={styles.avatarInitials}>{avatarInitials}</Text>
               </View>
               {isEditing ? (
                 <View style={styles.cameraOverlay}>
@@ -481,20 +518,20 @@ export function CHWProfileScreen(): React.JSX.Element {
               />
             </View>
           ) : (
-            <Text style={styles.profileName}>{profile.name}</Text>
+            <Text style={styles.profileName}>{displayName}</Text>
           )}
 
           <View style={styles.statsRow}>
             <View style={styles.statPill}>
               <Star size={12} color={colors.compassGold} />
-              <Text style={styles.statPillText}>{profile.rating.toFixed(1)} rating</Text>
+              <Text style={styles.statPillText}>{(apiProfile?.rating ?? 0).toFixed(1)} rating</Text>
             </View>
             <View style={styles.statPill}>
               <Briefcase size={12} color={colors.secondary} />
-              <Text style={styles.statPillText}>{profile.yearsExperience} yrs exp</Text>
+              <Text style={styles.statPillText}>{apiProfile?.yearsExperience ?? 0} yrs exp</Text>
             </View>
             <View style={styles.statPill}>
-              <Text style={styles.statPillText}>{profile.totalSessions} sessions</Text>
+              <Text style={styles.statPillText}>{apiProfile?.totalSessions ?? 0} sessions</Text>
             </View>
           </View>
           </View>
@@ -545,7 +582,7 @@ export function CHWProfileScreen(): React.JSX.Element {
               <InfoRow
                 icon={<MapPin size={16} color={colors.primary} />}
                 label="Zip Code"
-                value={profile.zipCode}
+                value={apiProfile?.zipCode ?? '—'}
               />
             </>
           )}
@@ -564,7 +601,7 @@ export function CHWProfileScreen(): React.JSX.Element {
               placeholder="Tell members about your background and specializations..."
             />
           ) : (
-            <Text style={styles.bioText}>{profile.bio}</Text>
+            <Text style={styles.bioText}>{apiProfile?.bio ?? ''}</Text>
           )}
         </View>
 
@@ -607,16 +644,16 @@ export function CHWProfileScreen(): React.JSX.Element {
             </>
           ) : (
             <View style={styles.pillRow}>
-              {profile.specializations.map((spec) => (
+              {(apiProfile?.specializations ?? []).map((spec) => (
                 <View
                   key={spec}
                   style={[
                     styles.pill,
-                    { backgroundColor: VERTICAL_COLORS[spec] + '18' },
+                    { backgroundColor: (VERTICAL_COLORS[spec as Vertical] ?? '#6B7A6B') + '18' },
                   ]}
                 >
-                  <Text style={[styles.pillText, { color: VERTICAL_COLORS[spec] }]}>
-                    {VERTICAL_LABELS[spec]}
+                  <Text style={[styles.pillText, { color: VERTICAL_COLORS[spec as Vertical] ?? '#6B7A6B' }]}>
+                    {VERTICAL_LABELS[spec as Vertical] ?? spec}
                   </Text>
                 </View>
               ))}
@@ -663,7 +700,7 @@ export function CHWProfileScreen(): React.JSX.Element {
             </>
           ) : (
             <View style={styles.pillRow}>
-              {profile.languages.map((lang) => (
+              {(apiProfile?.languages ?? []).map((lang) => (
                 <View key={lang} style={[styles.pill, { backgroundColor: colors.primary + '18' }]}>
                   <Text style={[styles.pillText, { color: colors.primary }]}>{lang}</Text>
                 </View>
