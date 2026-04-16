@@ -651,21 +651,6 @@ export function LandingScreen(): React.JSX.Element {
                     </Text>
                     <ArrowRight size={16} color="#FFFFFF" />
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      staticStyles.heroSecondaryButton,
-                      isDesktop && staticStyles.heroSecondaryButtonDesktop,
-                    ]}
-                    onPress={handleSecondaryPress}
-                    activeOpacity={0.75}
-                    accessibilityLabel={heroContent.secondaryButtonLabel}
-                    accessibilityRole="button"
-                  >
-                    <Text style={staticStyles.heroSecondaryButtonText}>
-                      {heroContent.secondaryButtonLabel}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
 
                 {/* Trust badges */}
