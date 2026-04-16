@@ -35,14 +35,19 @@ import {
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
-  sessions,
   sessionModeLabels,
   sessionStatusLabels,
   verticalLabels,
-  type Session,
   type SessionStatus,
   type Vertical,
+  type SessionMode,
 } from '../../data/mock';
+import {
+  useSessions,
+  type SessionData,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -154,7 +159,7 @@ const toastStyles = StyleSheet.create({
 // ─── Cancel Confirm Modal ─────────────────────────────────────────────────────
 
 interface ConfirmCancelModalProps {
-  session: Session;
+  session: SessionData;
   visible: boolean;
   onConfirm: (sessionId: string) => void;
   onDismiss: () => void;
@@ -178,7 +183,7 @@ function ConfirmCancelModal({
           <Text style={cancelModalStyles.title}>Cancel Session?</Text>
           <Text style={cancelModalStyles.body}>
             Are you sure you want to cancel your session with{' '}
-            <Text style={{ fontWeight: '700' }}>{session.chwName}</Text>?
+            <Text style={{ fontWeight: '700' }}>{session.chwName ?? 'your CHW'}</Text>?
             {' '}This cannot be undone.
           </Text>
           <View style={cancelModalStyles.btnRow}>
@@ -324,9 +329,9 @@ const starStyles = StyleSheet.create({
 // ─── Active Session Card ───────────────────────────────────────────────────────
 
 interface ActiveSessionCardProps {
-  session: Session;
+  session: SessionData;
   onMessage: (firstName: string) => void;
-  onRequestCancel: (session: Session) => void;
+  onRequestCancel: (session: SessionData) => void;
 }
 
 function ActiveSessionCard({
@@ -334,9 +339,13 @@ function ActiveSessionCard({
   onMessage,
   onRequestCancel,
 }: ActiveSessionCardProps): React.JSX.Element {
-  const statusColors = statusBadgeColors[session.status];
-  const initials = getInitials(session.chwName);
-  const verticalColor = verticalColors[session.vertical];
+  const chwDisplayName = session.chwName ?? 'CHW';
+  const statusColors = statusBadgeColors[session.status as SessionStatus] ?? {
+    bg: `${colors.mutedForeground}15`,
+    text: colors.mutedForeground,
+  };
+  const initials = getInitials(chwDisplayName);
+  const verticalColor = verticalColors[session.vertical as Vertical] ?? colors.primary;
 
   return (
     <View style={activeCardStyles.container}>
@@ -347,18 +356,22 @@ function ActiveSessionCard({
         </View>
         <View style={activeCardStyles.infoCol}>
           <View style={activeCardStyles.nameRow}>
-            <Text style={activeCardStyles.chwName} numberOfLines={1}>{session.chwName}</Text>
+            <Text style={activeCardStyles.chwName} numberOfLines={1}>{chwDisplayName}</Text>
             <View style={[activeCardStyles.statusBadge, { backgroundColor: statusColors.bg }]}>
               <Text style={[activeCardStyles.statusBadgeText, { color: statusColors.text }]}>
-                {sessionStatusLabels[session.status]}
+                {sessionStatusLabels[session.status as SessionStatus] ?? session.status}
               </Text>
             </View>
           </View>
           <View style={activeCardStyles.metaRow}>
             <View style={[activeCardStyles.verticalDot, { backgroundColor: verticalColor }]} />
-            <Text style={activeCardStyles.metaText}>{verticalLabels[session.vertical]}</Text>
+            <Text style={activeCardStyles.metaText}>
+              {verticalLabels[session.vertical as Vertical] ?? session.vertical}
+            </Text>
             <Text style={activeCardStyles.separator}>·</Text>
-            <Text style={activeCardStyles.metaText}>{sessionModeLabels[session.mode]}</Text>
+            <Text style={activeCardStyles.metaText}>
+              {sessionModeLabels[session.mode as SessionMode] ?? session.mode}
+            </Text>
           </View>
         </View>
       </View>
@@ -377,10 +390,10 @@ function ActiveSessionCard({
       {/* Actions */}
       <View style={activeCardStyles.actionRow}>
         <TouchableOpacity
-          onPress={() => onMessage(session.chwName.split(' ')[0] ?? session.chwName)}
+          onPress={() => onMessage((session.chwName ?? 'CHW').split(' ')[0] ?? 'CHW')}
           style={activeCardStyles.messageBtn}
           accessibilityRole="button"
-          accessibilityLabel={`Message ${session.chwName}`}
+          accessibilityLabel={`Message ${session.chwName ?? 'CHW'}`}
         >
           <MessageCircle color="#FFFFFF" size={13} />
           <Text style={activeCardStyles.messageBtnText}>Message CHW</Text>
@@ -389,7 +402,7 @@ function ActiveSessionCard({
           onPress={() => onRequestCancel(session)}
           style={activeCardStyles.cancelBtn}
           accessibilityRole="button"
-          accessibilityLabel={`Cancel session with ${session.chwName}`}
+          accessibilityLabel={`Cancel session with ${session.chwName ?? 'CHW'}`}
         >
           <XCircle color={colors.mutedForeground} size={13} />
           <Text style={activeCardStyles.cancelBtnText}>Cancel</Text>
@@ -531,7 +544,7 @@ const activeCardStyles = StyleSheet.create({
 // ─── Completed Session Card ────────────────────────────────────────────────────
 
 interface CompletedSessionCardProps {
-  session: Session;
+  session: SessionData;
   rating: number;
   isExpanded: boolean;
   onRate: (sessionId: string, rating: number) => void;
@@ -547,8 +560,9 @@ function CompletedSessionCard({
   onToggleExpand,
   onBookAgain,
 }: CompletedSessionCardProps): React.JSX.Element {
-  const initials = getInitials(session.chwName);
-  const verticalColor = verticalColors[session.vertical];
+  const chwDisplayName = session.chwName ?? 'CHW';
+  const initials = getInitials(chwDisplayName);
+  const verticalColor = verticalColors[session.vertical as Vertical] ?? colors.primary;
 
   return (
     <View style={completedCardStyles.container}>
@@ -559,7 +573,7 @@ function CompletedSessionCard({
         </View>
         <View style={completedCardStyles.infoCol}>
           <View style={completedCardStyles.nameRow}>
-            <Text style={completedCardStyles.chwName} numberOfLines={1}>{session.chwName}</Text>
+            <Text style={completedCardStyles.chwName} numberOfLines={1}>{chwDisplayName}</Text>
             <View style={[completedCardStyles.statusBadge, { backgroundColor: `${colors.primary}15` }]}>
               <Text style={[completedCardStyles.statusBadgeText, { color: colors.primary }]}>
                 Completed
@@ -568,9 +582,13 @@ function CompletedSessionCard({
           </View>
           <View style={completedCardStyles.metaRow}>
             <View style={[completedCardStyles.verticalDot, { backgroundColor: verticalColor }]} />
-            <Text style={completedCardStyles.metaText}>{verticalLabels[session.vertical]}</Text>
+            <Text style={completedCardStyles.metaText}>
+              {verticalLabels[session.vertical as Vertical] ?? session.vertical}
+            </Text>
             <Text style={completedCardStyles.separator}>·</Text>
-            <Text style={completedCardStyles.metaText}>{sessionModeLabels[session.mode]}</Text>
+            <Text style={completedCardStyles.metaText}>
+              {sessionModeLabels[session.mode as SessionMode] ?? session.mode}
+            </Text>
           </View>
         </View>
       </View>
@@ -625,7 +643,7 @@ function CompletedSessionCard({
         onPress={onBookAgain}
         style={completedCardStyles.bookAgainBtn}
         accessibilityRole="button"
-        accessibilityLabel={`Book another session with ${session.chwName}`}
+        accessibilityLabel={`Book another session with ${session.chwName ?? 'CHW'}`}
       >
         <Text style={completedCardStyles.bookAgainText}>Book Again</Text>
       </TouchableOpacity>
@@ -776,21 +794,23 @@ const completedCardStyles = StyleSheet.create({
 
 export function MemberSessionsScreen(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabKey>('active');
-  const [cancellingSession, setCancellingSession] = useState<Session | null>(null);
+  const [cancellingSession, setCancellingSession] = useState<SessionData | null>(null);
   const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set());
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const memberSessions = sessions.filter((s) => s.memberName === MOCK_MEMBER_NAME);
+  const sessionsQuery = useSessions();
+  const allSessions = sessionsQuery.data ?? [];
 
-  const activeSessions = memberSessions.filter(
+  // API already scopes to the authenticated member — no client-side name filter needed
+  const activeSessions = allSessions.filter(
     (s) =>
       (s.status === 'scheduled' || s.status === 'in_progress') &&
       !cancelledIds.has(s.id),
   );
 
-  const completedSessions = memberSessions.filter((s) => s.status === 'completed');
+  const completedSessions = allSessions.filter((s) => s.status === 'completed');
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -805,7 +825,7 @@ export function MemberSessionsScreen(): React.JSX.Element {
     [showToast],
   );
 
-  const handleRequestCancel = useCallback((session: Session) => {
+  const handleRequestCancel = useCallback((session: SessionData) => {
     setCancellingSession(session);
   }, []);
 
@@ -841,6 +861,29 @@ export function MemberSessionsScreen(): React.JSX.Element {
   const handleBookAgain = useCallback(() => {
     showToast('Navigate to Find CHW to book a new session.');
   }, [showToast]);
+
+  if (sessionsQuery.isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <View style={{ flex: 1, padding: 16, paddingTop: 20 }}>
+          <LoadingSkeleton variant="rows" rows={4} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (sessionsQuery.error) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <ErrorState
+          message="Could not load your sessions. Please try again."
+          onRetry={() => void sessionsQuery.refetch()}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

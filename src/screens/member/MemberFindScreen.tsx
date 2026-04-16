@@ -36,13 +36,18 @@ import {
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
-  chwProfiles,
   verticalLabels,
-  type CHWProfile,
   type SessionMode,
   type Urgency,
   type Vertical,
 } from '../../data/mock';
+import {
+  useChwBrowse,
+  useCreateRequest,
+  type ChwBrowseItem,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,10 +208,10 @@ const starStyles = StyleSheet.create({
 // ─── Schedule Modal ────────────────────────────────────────────────────────────
 
 interface ScheduleModalProps {
-  chw: CHWProfile;
+  chw: ChwBrowseItem;
   visible: boolean;
   onClose: () => void;
-  onSubmit: (chwFirstName: string, formData: ScheduleFormData) => void;
+  onSubmit: (chwFirstName: string, formData: ScheduleFormData) => Promise<void>;
 }
 
 function ScheduleModal({ chw, visible, onClose, onSubmit }: ScheduleModalProps): React.JSX.Element {
@@ -229,13 +234,21 @@ function ScheduleModal({ chw, visible, onClose, onSubmit }: ScheduleModalProps):
 
   const handleSubmit = useCallback(() => {
     if (!selectedVertical) return;
-    const firstName = chw.name.split(' ')[0];
-    onSubmit(firstName, { vertical: selectedVertical, urgency, mode, description });
+    const firstName = chw.name.split(' ')[0] ?? chw.name;
+    void onSubmit(firstName, { vertical: selectedVertical, urgency, mode, description });
     resetForm();
   }, [chw.name, description, mode, onSubmit, resetForm, selectedVertical, urgency]);
 
-  const avatarBg = getAvatarBg(chw.avatar);
-  const avatarTextColor = getAvatarTextColor(chw.avatar);
+  // Derive initials from name since ChwBrowseItem has no pre-computed avatar field
+  const initials = chw.name
+    .split(' ')
+    .slice(0, 2)
+    .map((p) => p[0] ?? '')
+    .join('')
+    .toUpperCase();
+
+  const avatarBg = getAvatarBg(initials);
+  const avatarTextColor = getAvatarTextColor(initials);
 
   return (
     <Modal
@@ -251,7 +264,7 @@ function ScheduleModal({ chw, visible, onClose, onSubmit }: ScheduleModalProps):
             <View style={modalStyles.headerLeft}>
               <View style={[modalStyles.avatar, { backgroundColor: avatarBg }]}>
                 <Text style={[modalStyles.avatarText, { color: avatarTextColor }]}>
-                  {chw.avatar}
+                  {initials}
                 </Text>
               </View>
               <View>
@@ -552,20 +565,26 @@ const modalStyles = StyleSheet.create({
 // ─── CHW Card ─────────────────────────────────────────────────────────────────
 
 interface CHWCardProps {
-  chw: CHWProfile;
-  onSchedule: (chw: CHWProfile) => void;
+  chw: ChwBrowseItem;
+  onSchedule: (chw: ChwBrowseItem) => void;
 }
 
 function CHWCard({ chw, onSchedule }: CHWCardProps): React.JSX.Element {
-  const avatarBg = getAvatarBg(chw.avatar);
-  const avatarTextColor = getAvatarTextColor(chw.avatar);
+  const initials = chw.name
+    .split(' ')
+    .slice(0, 2)
+    .map((p) => p[0] ?? '')
+    .join('')
+    .toUpperCase();
+  const avatarBg = getAvatarBg(initials);
+  const avatarTextColor = getAvatarTextColor(initials);
 
   return (
     <View style={cardStyles.container} accessibilityRole="none">
       <View style={cardStyles.topRow}>
         {/* Avatar */}
         <View style={[cardStyles.avatar, { backgroundColor: avatarBg }]}>
-          <Text style={[cardStyles.avatarText, { color: avatarTextColor }]}>{chw.avatar}</Text>
+          <Text style={[cardStyles.avatarText, { color: avatarTextColor }]}>{initials}</Text>
         </View>
 
         <View style={cardStyles.infoCol}>
@@ -593,7 +612,9 @@ function CHWCard({ chw, onSchedule }: CHWCardProps): React.JSX.Element {
           <View style={cardStyles.pillRow}>
             {chw.specializations.map((v) => (
               <View key={v} style={cardStyles.pill}>
-                <Text style={cardStyles.pillText}>{verticalLabels[v]}</Text>
+                <Text style={cardStyles.pillText}>
+                  {verticalLabels[v as Vertical] ?? v}
+                </Text>
               </View>
             ))}
           </View>
@@ -760,23 +781,29 @@ const cardStyles = StyleSheet.create({
 export function MemberFindScreen(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
-  const [schedulingChw, setSchedulingChw] = useState<CHWProfile | null>(null);
+  const [schedulingChw, setSchedulingChw] = useState<ChwBrowseItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Re-fetch whenever the vertical filter changes (passes undefined for 'all')
+  const browseVertical = activeFilter === 'all' ? undefined : activeFilter;
+  const chwQuery = useChwBrowse(browseVertical);
+  const createRequest = useCreateRequest();
+
+  const allChws = chwQuery.data ?? [];
 
   const filteredChws = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    return chwProfiles.filter((chw) => {
-      const matchesFilter =
-        activeFilter === 'all' || chw.specializations.includes(activeFilter as Vertical);
-      if (!matchesFilter) return false;
-      if (!query) return true;
+    if (!query) return allChws;
+    return allChws.filter((chw) => {
       return (
         chw.name.toLowerCase().includes(query) ||
         chw.bio.toLowerCase().includes(query) ||
-        chw.specializations.some((s) => verticalLabels[s].toLowerCase().includes(query))
+        chw.specializations.some((s) =>
+          (verticalLabels[s as Vertical] ?? s).toLowerCase().includes(query),
+        )
       );
     });
-  }, [searchQuery, activeFilter]);
+  }, [searchQuery, allChws]);
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -784,7 +811,7 @@ export function MemberFindScreen(): React.JSX.Element {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSchedule = useCallback((chw: CHWProfile) => {
+  const handleSchedule = useCallback((chw: ChwBrowseItem) => {
     setSchedulingChw(chw);
   }, []);
 
@@ -793,11 +820,22 @@ export function MemberFindScreen(): React.JSX.Element {
   }, []);
 
   const handleModalSubmit = useCallback(
-    (chwFirstName: string, _formData: ScheduleFormData) => {
+    async (chwFirstName: string, formData: ScheduleFormData) => {
       setSchedulingChw(null);
-      showToast(`Request submitted! ${chwFirstName} will be in touch soon.`);
+      try {
+        await createRequest.mutateAsync({
+          vertical: formData.vertical,
+          urgency: formData.urgency,
+          description: formData.description,
+          preferredMode: formData.mode,
+          estimatedUnits: 1,
+        });
+        showToast(`Request submitted! ${chwFirstName} will be in touch soon.`);
+      } catch {
+        showToast('Failed to submit request. Please try again.');
+      }
     },
-    [showToast],
+    [createRequest, showToast],
   );
 
   return (
@@ -847,11 +885,6 @@ export function MemberFindScreen(): React.JSX.Element {
       >
         {FILTER_TABS.map((tab) => {
           const isActive = activeFilter === tab.key;
-          const count =
-            tab.key === 'all'
-              ? chwProfiles.length
-              : chwProfiles.filter((c) => c.specializations.includes(tab.key as Vertical)).length;
-
           return (
             <TouchableOpacity
               key={tab.key}
@@ -862,7 +895,6 @@ export function MemberFindScreen(): React.JSX.Element {
             >
               <Text style={[styles.filterTabText, isActive && styles.filterTabTextActive]}>
                 {tab.label}
-                {count > 0 ? `  ${count}` : ''}
               </Text>
             </TouchableOpacity>
           );
@@ -876,24 +908,35 @@ export function MemberFindScreen(): React.JSX.Element {
       </View>
 
       {/* CHW List */}
-      <FlatList
-        data={filteredChws}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <CHWCard chw={item} onSchedule={handleSchedule} />
-        )}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyState}>
-            <Search color={colors.mutedForeground} size={28} />
-            <Text style={styles.emptyTitle}>No CHWs found</Text>
-            <Text style={styles.emptySub}>
-              Try a different filter or search term.
-            </Text>
-          </View>
-        )}
-      />
+      {chwQuery.isLoading ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <LoadingSkeleton variant="rows" rows={4} />
+        </View>
+      ) : chwQuery.error ? (
+        <ErrorState
+          message="Could not load CHW listings. Please try again."
+          onRetry={() => void chwQuery.refetch()}
+        />
+      ) : (
+        <FlatList
+          data={filteredChws}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <CHWCard chw={item} onSchedule={handleSchedule} />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Search color={colors.mutedForeground} size={28} />
+              <Text style={styles.emptyTitle}>No CHWs found</Text>
+              <Text style={styles.emptySub}>
+                Try a different filter or search term.
+              </Text>
+            </View>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }

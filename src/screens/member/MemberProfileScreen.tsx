@@ -48,14 +48,19 @@ import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
-  memberProfiles,
-  mockRewardHistory,
   redemptionCatalog,
   verticalLabels,
-  type RewardHistoryEntry,
   type RedemptionItem,
   type Vertical,
 } from '../../data/mock';
+import {
+  useMemberProfile,
+  useMemberRewards,
+  useUpdateMemberProfile,
+  type RewardTransaction,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,8 +91,6 @@ interface ProfileDraft {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const MOCK_MEMBER = memberProfiles[0];
 
 const MOCK_PHONE = '(310) 555-0192';
 const MOCK_EMAIL = 'rosa.delgado@email.com';
@@ -148,7 +151,14 @@ function formatRewardDate(dateStr: string): string {
   });
 }
 
-function buildDraft(name: string, profile: typeof MOCK_MEMBER): ProfileDraft {
+interface ProfileSource {
+  zipCode: string;
+  primaryLanguage: string;
+  primaryNeed: string;
+  insuranceProvider?: string;
+}
+
+function buildDraft(name: string, profile: ProfileSource): ProfileDraft {
   const parts = name.split(' ');
   return {
     firstName: parts[0] ?? '',
@@ -157,8 +167,8 @@ function buildDraft(name: string, profile: typeof MOCK_MEMBER): ProfileDraft {
     phone: MOCK_PHONE,
     email: MOCK_EMAIL,
     primaryLanguage: profile.primaryLanguage,
-    primaryNeed: profile.primaryNeed,
-    insuranceProvider: MOCK_INSURANCE,
+    primaryNeed: profile.primaryNeed as Vertical,
+    insuranceProvider: profile.insuranceProvider ?? MOCK_INSURANCE,
   };
 }
 
@@ -373,7 +383,7 @@ const notifRowStyles = StyleSheet.create({
 
 // ─── Reward history row ───────────────────────────────────────────────────────
 
-function RewardRow({ item }: { item: RewardHistoryEntry }): React.JSX.Element {
+function RewardRow({ item }: { item: RewardTransaction }): React.JSX.Element {
   const isPositive = item.points > 0;
   return (
     <View style={rewardRowStyles.container}>
@@ -384,9 +394,9 @@ function RewardRow({ item }: { item: RewardHistoryEntry }): React.JSX.Element {
       </View>
       <View style={rewardRowStyles.info}>
         <Text style={rewardRowStyles.description} numberOfLines={2}>
-          {item.description}
+          {item.action.replace(/_/g, ' ')}
         </Text>
-        <Text style={rewardRowStyles.date}>{formatRewardDate(item.date)}</Text>
+        <Text style={rewardRowStyles.date}>{formatRewardDate(item.createdAt)}</Text>
       </View>
       <Text
         style={[
@@ -552,15 +562,56 @@ const redemptionCardStyles = StyleSheet.create({
 
 export function MemberProfileScreen(): React.JSX.Element {
   const { userName, logout } = useAuth();
-  const displayName = userName ?? MOCK_MEMBER.name;
+
+  const profileQuery = useMemberProfile();
+  const rewardsQuery = useMemberRewards();
+  const updateProfile = useUpdateMemberProfile();
+
+  const apiProfile = profileQuery.data;
+
+  // Use API data when available, fall back to auth userName
+  const displayName = userName ?? 'Member';
 
   // Committed name state
   const [name, setName] = useState(displayName);
-  const [rewardsBalance, setRewardsBalance] = useState(MOCK_MEMBER.rewardsBalance);
+  const [rewardsBalance, setRewardsBalance] = useState<number | null>(null);
+
+  // Sync rewardsBalance from API once loaded
+  React.useEffect(() => {
+    if (apiProfile?.rewardsBalance !== undefined) {
+      setRewardsBalance(apiProfile.rewardsBalance);
+    }
+  }, [apiProfile?.rewardsBalance]);
+
+  const effectiveBalance = rewardsBalance ?? apiProfile?.rewardsBalance ?? 0;
 
   // Edit mode
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState<ProfileDraft>(() => buildDraft(displayName, MOCK_MEMBER));
+
+  const fallbackProfile: ProfileSource = {
+    zipCode: apiProfile?.zipCode ?? '',
+    primaryLanguage: apiProfile?.primaryLanguage ?? 'English',
+    primaryNeed: apiProfile?.primaryNeed ?? 'healthcare',
+    insuranceProvider: apiProfile?.insuranceProvider ?? MOCK_INSURANCE,
+  };
+
+  const [draft, setDraft] = useState<ProfileDraft>(() =>
+    buildDraft(displayName, fallbackProfile),
+  );
+
+  // Re-initialize draft when API data loads
+  React.useEffect(() => {
+    if (apiProfile) {
+      setDraft(buildDraft(displayName, {
+        zipCode: apiProfile.zipCode,
+        primaryLanguage: apiProfile.primaryLanguage,
+        primaryNeed: apiProfile.primaryNeed,
+        insuranceProvider: apiProfile.insuranceProvider,
+      }));
+    }
+  // Only run when profile data first arrives
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiProfile?.id]);
 
   const [notifications, setNotifications] = useState<NotificationSettings>({
     sessionReminders: true,
@@ -570,14 +621,15 @@ export function MemberProfileScreen(): React.JSX.Element {
 
   const [chwPreferences, setChwPreferences] = useState<CHWPreferences>({
     genderPreference: 'any',
-    languagePreferences: [MOCK_MEMBER.primaryLanguage],
-    sessionModePreference: 'in_person',
+    languagePreferences: [apiProfile?.primaryLanguage ?? 'English'],
+    sessionModePreference: (apiProfile?.preferredMode as SessionModePreference | undefined) ?? 'in_person',
   });
 
   const handleEditPress = useCallback(() => {
-    setDraft(buildDraft(name, MOCK_MEMBER));
+    setDraft(buildDraft(name, fallbackProfile));
     setIsEditing(true);
-  }, [name]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, apiProfile]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
@@ -590,8 +642,18 @@ export function MemberProfileScreen(): React.JSX.Element {
     if (updatedName) {
       setName(updatedName);
     }
+    // Persist changes to the backend
+    void updateProfile.mutateAsync({
+      zipCode: draft.zipCode,
+      primaryLanguage: draft.primaryLanguage,
+      primaryNeed: draft.primaryNeed,
+      insuranceProvider: draft.insuranceProvider,
+      preferredMode: chwPreferences.sessionModePreference,
+    }).catch(() => {
+      // Silently ignore network errors — local state is already updated
+    });
     setIsEditing(false);
-  }, [draft]);
+  }, [draft, chwPreferences.sessionModePreference, updateProfile]);
 
   const handleToggleLanguagePref = useCallback((lang: string) => {
     setChwPreferences((prev) => {
@@ -614,29 +676,29 @@ export function MemberProfileScreen(): React.JSX.Element {
 
   const handleRedeem = useCallback(
     (item: RedemptionItem) => {
-      if (rewardsBalance < item.pointsCost) {
+      if (effectiveBalance < item.pointsCost) {
         Alert.alert(
           'Insufficient Points',
-          `You need ${item.pointsCost - rewardsBalance} more points to redeem ${item.name}.`,
+          `You need ${item.pointsCost - effectiveBalance} more points to redeem ${item.name}.`,
         );
         return;
       }
       Alert.alert(
         `Redeem ${item.name}?`,
-        `This will use ${item.pointsCost} points from your balance.\n\nCurrent balance: ${rewardsBalance} pts`,
+        `This will use ${item.pointsCost} points from your balance.\n\nCurrent balance: ${effectiveBalance} pts`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Confirm',
             onPress: () => {
-              setRewardsBalance((prev) => prev - item.pointsCost);
+              setRewardsBalance((prev) => (prev ?? effectiveBalance) - item.pointsCost);
               Alert.alert('Redemption Submitted', `Your ${item.name} request has been submitted.`);
             },
           },
         ],
       );
     },
-    [rewardsBalance],
+    [effectiveBalance],
   );
 
   const handleSignOut = useCallback(() => {
@@ -652,7 +714,31 @@ export function MemberProfileScreen(): React.JSX.Element {
 
   const initials = getInitials(name);
 
-  const committedDraft = buildDraft(name, MOCK_MEMBER);
+  const committedDraft = buildDraft(name, fallbackProfile);
+
+  if (profileQuery.isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <View style={{ flex: 1, padding: 16, paddingTop: 20 }}>
+          <LoadingSkeleton variant="card" />
+          <LoadingSkeleton variant="rows" rows={4} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (profileQuery.error) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <ErrorState
+          message="Could not load your profile. Please try again."
+          onRetry={() => void profileQuery.refetch()}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -745,7 +831,7 @@ export function MemberProfileScreen(): React.JSX.Element {
           </View>
           <View style={styles.rewardsInfo}>
             <Text style={styles.rewardsLabel}>Rewards Balance</Text>
-            <Text style={styles.rewardsValue}>{rewardsBalance} points</Text>
+            <Text style={styles.rewardsValue}>{effectiveBalance} points</Text>
           </View>
           <View style={styles.rewardsBadge}>
             <Text style={styles.rewardsBadgeText}>Active</Text>
@@ -1028,7 +1114,7 @@ export function MemberProfileScreen(): React.JSX.Element {
             <Text style={styles.rewardsHistoryTitle}>Rewards History</Text>
           </View>
           <FlatList
-            data={mockRewardHistory}
+            data={rewardsQuery.data ?? []}
             keyExtractor={(item) => item.id}
             renderItem={({ item, index }) => (
               <>
@@ -1048,14 +1134,14 @@ export function MemberProfileScreen(): React.JSX.Element {
             <Text style={styles.catalogTitle}>Redemption Catalog</Text>
           </View>
           <Text style={styles.catalogBalance}>
-            Your balance: <Text style={styles.catalogBalanceBold}>{rewardsBalance} pts</Text>
+            Your balance: <Text style={styles.catalogBalanceBold}>{effectiveBalance} pts</Text>
           </Text>
           {redemptionCatalog.map((item) => (
             <RedemptionCard
               key={item.id}
               item={item}
               onRedeem={handleRedeem}
-              balance={rewardsBalance}
+              balance={effectiveBalance}
             />
           ))}
         </View>

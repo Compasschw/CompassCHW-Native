@@ -35,13 +35,17 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
   goals,
-  memberProfiles,
-  sessions,
   verticalLabels,
   type Goal,
-  type Session,
   type Vertical,
 } from '../../data/mock';
+import {
+  useSessions,
+  useMemberProfile,
+  type SessionData,
+} from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 import type { MemberTabParamList } from '../../navigation/MemberTabNavigator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,13 +53,6 @@ import type { MemberTabParamList } from '../../navigation/MemberTabNavigator';
 interface MemberHomeScreenProps {
   navigation: BottomTabNavigationProp<MemberTabParamList, 'Home'>;
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-/** Mock member context — in production this comes from auth/API. */
-const MOCK_MEMBER = memberProfiles[0];
-
-const MOCK_MEMBER_NAME = MOCK_MEMBER.name;
 
 const verticalEmoji: Record<Vertical, string> = {
   housing: '🏠',
@@ -164,18 +161,18 @@ function GoalCard({ goal }: GoalCardProps): React.JSX.Element {
 }
 
 interface UpcomingSessionRowProps {
-  session: Session;
+  session: SessionData;
 }
 
 function UpcomingSessionRow({ session }: UpcomingSessionRowProps): React.JSX.Element {
-  const emoji = verticalEmoji[session.vertical];
+  const emoji = verticalEmoji[session.vertical as Vertical] ?? '📅';
   return (
     <View style={styles.sessionRow}>
       <View style={styles.sessionIconContainer}>
         <Text style={styles.sessionEmoji} accessibilityElementsHidden>{emoji}</Text>
       </View>
       <View style={styles.sessionInfo}>
-        <Text style={styles.sessionChwName} numberOfLines={1}>{session.chwName}</Text>
+        <Text style={styles.sessionChwName} numberOfLines={1}>{session.chwName ?? 'CHW'}</Text>
         <Text style={styles.sessionDate}>{formatScheduledDate(session.scheduledAt)}</Text>
       </View>
       <View style={styles.scheduledBadge}>
@@ -189,17 +186,55 @@ function UpcomingSessionRow({ session }: UpcomingSessionRowProps): React.JSX.Ele
 
 export function MemberHomeScreen({ navigation }: MemberHomeScreenProps): React.JSX.Element {
   const { userName } = useAuth();
-  const firstName = (userName ?? MOCK_MEMBER_NAME).split(' ')[0];
 
-  const memberSessions = sessions.filter(
-    (s) => s.memberName === MOCK_MEMBER_NAME,
-  );
-  const upcomingSessions = memberSessions.filter((s) => s.status === 'scheduled');
+  const sessionsQuery = useSessions();
+  const profileQuery = useMemberProfile();
+
+  const allSessions = sessionsQuery.data ?? [];
+  const profile = profileQuery.data;
+
+  const firstName = (userName ?? profile?.userId ?? 'there').split(' ')[0];
+  const rewardsBalance = profile?.rewardsBalance ?? 0;
+
+  const upcomingSessions = allSessions.filter((s) => s.status === 'scheduled');
+  // Goals endpoint not available — keep mock data
   const activeGoals = goals;
 
   const handleFindCHW = useCallback(() => {
     navigation.navigate('FindCHW');
   }, [navigation]);
+
+  const isLoading = sessionsQuery.isLoading || profileQuery.isLoading;
+  const hasError = !isLoading && (sessionsQuery.error !== null || profileQuery.error !== null);
+
+  const handleRetry = useCallback(() => {
+    void sessionsQuery.refetch();
+    void profileQuery.refetch();
+  }, [sessionsQuery, profileQuery]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <View style={{ flex: 1, padding: 16, paddingTop: 20 }}>
+          <LoadingSkeleton variant="stat-grid" />
+          <LoadingSkeleton variant="rows" rows={3} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <ErrorState
+          message="Could not load your home data. Please try again."
+          onRetry={handleRetry}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -224,7 +259,7 @@ export function MemberHomeScreen({ navigation }: MemberHomeScreenProps): React.J
           <StatCard
             icon={<Gift color={colors.primary} size={18} />}
             label="Rewards"
-            value={MOCK_MEMBER.rewardsBalance}
+            value={rewardsBalance}
             subtext="pts"
             iconBg={`${colors.primary}15`}
           />

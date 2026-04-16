@@ -34,12 +34,13 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import {
   goals,
-  mockCalendarEvents,
-  sessions,
   verticalLabels,
   type CalendarEvent,
   type Vertical,
 } from '../../data/mock';
+import { useSessions } from '../../hooks/useApiQueries';
+import { LoadingSkeleton } from '../../components/shared/LoadingSkeleton';
+import { ErrorState } from '../../components/shared/ErrorState';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -123,88 +124,55 @@ function firstNameFromFull(fullName: string): string {
 }
 
 /**
- * Builds the full event list for this member from three sources:
- * 1. mockCalendarEvents filtered to DEMO_MEMBER_NAME
- * 2. Sessions array (sessions where memberName matches) — deduplicated
- * 3. Goals array (nextSession date as a goal_milestone event) — deduplicated
+ * Derives calendar events from live session data.
+ * Also appends goal milestones from mock goals (no backend endpoint yet).
  */
-function buildMemberEvents(): CalendarEvent[] {
-  const mockMemberEvents = mockCalendarEvents.filter(
-    (e) => e.memberName === DEMO_MEMBER_NAME,
-  );
+function buildMemberEvents(
+  liveSessions: { id: string; scheduledAt: string; vertical: string; chwName?: string; memberName?: string }[],
+): CalendarEvent[] {
+  const sessionEvents: CalendarEvent[] = liveSessions.map((session) => {
+    const dt = new Date(session.scheduledAt);
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getUTCDate()).padStart(2, '0');
+    const date = `${dt.getUTCFullYear()}-${mm}-${dd}`;
+    const startHH = String(dt.getUTCHours()).padStart(2, '0');
+    const startMin = String(dt.getUTCMinutes()).padStart(2, '0');
+    const endHH = String(dt.getUTCHours() + 1).padStart(2, '0');
 
-  const existingSessionKeys = new Set<string>(
-    mockMemberEvents
-      .filter((e) => e.type === 'session')
-      .map((e) => `${e.date}|${e.memberName ?? ''}`),
-  );
+    return {
+      id: `live-sess-${session.id}`,
+      title: `Session with ${firstNameFromFull(session.chwName ?? 'CHW')}`,
+      date,
+      startTime: `${startHH}:${startMin}`,
+      endTime: `${endHH}:${startMin}`,
+      vertical: session.vertical as Vertical,
+      type: 'session' as const,
+      chwName: session.chwName,
+      memberName: session.memberName,
+    };
+  });
 
-  const derivedSessionEvents: CalendarEvent[] = sessions
-    .filter((session) => {
-      if (session.memberName !== DEMO_MEMBER_NAME) return false;
-      const dt = new Date(session.scheduledAt);
-      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
-      const dd = String(dt.getUTCDate()).padStart(2, '0');
-      const date = `${dt.getUTCFullYear()}-${mm}-${dd}`;
-      return !existingSessionKeys.has(`${date}|${session.memberName}`);
-    })
-    .map((session) => {
-      const dt = new Date(session.scheduledAt);
-      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
-      const dd = String(dt.getUTCDate()).padStart(2, '0');
-      const date = `${dt.getUTCFullYear()}-${mm}-${dd}`;
-      const startHH = String(dt.getUTCHours()).padStart(2, '0');
-      const startMin = String(dt.getUTCMinutes()).padStart(2, '0');
-      const endHH = String(dt.getUTCHours() + 1).padStart(2, '0');
+  // Goals endpoint not available yet — derive goal milestones from mock data
+  const goalMilestoneEvents: CalendarEvent[] = goals.map((goal) => {
+    const dt = new Date(goal.nextSession);
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getUTCDate()).padStart(2, '0');
+    const date = `${dt.getUTCFullYear()}-${mm}-${dd}`;
+    const hh = String(dt.getUTCHours()).padStart(2, '0');
+    const min = String(dt.getUTCMinutes()).padStart(2, '0');
 
-      return {
-        id: `derived-sess-${session.id}`,
-        title: `Session with ${firstNameFromFull(session.chwName)}`,
-        date,
-        startTime: `${startHH}:${startMin}`,
-        endTime: `${endHH}:${startMin}`,
-        vertical: session.vertical,
-        type: 'session' as const,
-        chwName: session.chwName,
-        memberName: session.memberName,
-      };
-    });
+    return {
+      id: `goal-${goal.id}`,
+      title: goal.title,
+      date,
+      startTime: `${hh}:${min}`,
+      endTime: `${hh}:${min}`,
+      vertical: goal.category as Vertical,
+      type: 'goal_milestone' as const,
+    };
+  });
 
-  const existingMilestoneKeys = new Set<string>(
-    mockMemberEvents
-      .filter((e) => e.type === 'goal_milestone')
-      .map((e) => e.date),
-  );
-
-  const goalMilestoneEvents: CalendarEvent[] = goals
-    .filter((goal) => {
-      const dt = new Date(goal.nextSession);
-      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
-      const dd = String(dt.getUTCDate()).padStart(2, '0');
-      const date = `${dt.getUTCFullYear()}-${mm}-${dd}`;
-      return !existingMilestoneKeys.has(date);
-    })
-    .map((goal) => {
-      const dt = new Date(goal.nextSession);
-      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
-      const dd = String(dt.getUTCDate()).padStart(2, '0');
-      const date = `${dt.getUTCFullYear()}-${mm}-${dd}`;
-      const hh = String(dt.getUTCHours()).padStart(2, '0');
-      const min = String(dt.getUTCMinutes()).padStart(2, '0');
-
-      return {
-        id: `derived-goal-${goal.id}`,
-        title: goal.title,
-        date,
-        startTime: `${hh}:${min}`,
-        endTime: `${hh}:${min}`,
-        vertical: goal.category,
-        type: 'goal_milestone' as const,
-        memberName: DEMO_MEMBER_NAME,
-      };
-    });
-
-  return [...mockMemberEvents, ...derivedSessionEvents, ...goalMilestoneEvents];
+  return [...sessionEvents, ...goalMilestoneEvents];
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -434,11 +402,18 @@ export function MemberCalendarScreen(): React.JSX.Element {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1)); // April 2026
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
+  const sessionsQuery = useSessions();
+  const liveSessions = sessionsQuery.data ?? [];
+
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const cells = getMonthDays(year, month);
 
-  const memberEvents = useMemo<CalendarEvent[]>(() => buildMemberEvents(), []);
+  const memberEvents = useMemo<CalendarEvent[]>(
+    () => buildMemberEvents(liveSessions),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessionsQuery.data],
+  );
   const eventsByDate = useMemo(() => groupEventsByDate(memberEvents), [memberEvents]);
 
   const handlePrevMonth = useCallback(() => {
@@ -463,6 +438,30 @@ export function MemberCalendarScreen(): React.JSX.Element {
 
   const isToday = (day: number) =>
     year === TODAY_YEAR && month === TODAY_MONTH && day === TODAY_DAY;
+
+  if (sessionsQuery.isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <View style={{ flex: 1, padding: 16, paddingTop: 20 }}>
+          <LoadingSkeleton variant="card" />
+          <LoadingSkeleton variant="rows" rows={3} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (sessionsQuery.error) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <ErrorState
+          message="Could not load calendar data. Please try again."
+          onRetry={() => void sessionsQuery.refetch()}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
