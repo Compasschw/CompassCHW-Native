@@ -1026,22 +1026,22 @@ export function LandingScreen(): React.JSX.Element {
         {/* ════════════════════════════════════════════════════════════════
             SECTION 7 — CTA SECTION
         ════════════════════════════════════════════════════════════════ */}
-        <View style={[staticStyles.ctaSection, { minHeight: isDesktop ? 520 : 400 }]}>
+        <View style={[staticStyles.ctaSection, { minHeight: isDesktop ? 600 : 520 }]}>
           <Image
             source={neighborhoodImage}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
             accessibilityIgnoresInvertColors
             accessibilityLabel="Los Angeles neighborhood aerial view"
             resizeMode="cover"
           />
           <View style={[StyleSheet.absoluteFill, staticStyles.ctaOverlay]} />
 
-          <View style={{ zIndex: 1 }}>
+          <View style={{ zIndex: 1, flex: 1, justifyContent: 'center' }}>
             <ContentWrapper
               isDesktop={isDesktop}
               style={[
                 staticStyles.ctaContent,
-                { paddingVertical: isDesktop ? 112 : spacing.xxl, paddingHorizontal: isDesktop ? 48 : px },
+                { paddingVertical: isDesktop ? 140 : 80, paddingHorizontal: isDesktop ? 48 : px },
               ]}
             >
               <Text style={staticStyles.ctaEyebrow}>Limited Early Access</Text>
