@@ -1,17 +1,19 @@
 /**
  * LoginScreen — sign in / sign up toggle styled to match the Lovable /auth page.
  *
- * Layout (mobile-first, vertical stack):
- *   1. Logo wordmark at top
- *   2. Marketing headline + value props
- *   3. Auth card — Google/Apple SSO, OR divider, email/password form, toggle
- *   4. Demo buttons below the card (border-only, subtle)
+ * Layout:
+ *   - Sticky navbar (64px, matching LandingScreen pattern) with desktop nav links
+ *   - 2-column layout on desktop (marketing copy left / form card right)
+ *   - Single column on mobile (form card below marketing copy)
+ *   - No Full Name field — register call derives display name from email
+ *   - Demo buttons below the card, separated by a "DEMO" divider
  */
 
 import React, { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -22,23 +24,36 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
 
-import { Image } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../theme/colors';
-import { typography, fonts } from '../../theme/typography';
+import { fonts } from '../../theme/typography';
 import { shadows } from '../../theme/shadows';
 import { radii, spacing } from '../../theme/spacing';
 import type { UserRole } from '../../data/mock';
+import type { AuthStackParamList } from '../../navigation/AppNavigator';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const compassIcon = require('../../../assets/compass-icon.png') as number;
 
-// ─── Demo accounts ─────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/** Viewport width at which the 2-column desktop layout activates. */
+const DESKTOP_BREAKPOINT = 1024;
+
+/** Maximum content width — mirrors Lovable's max-w-6xl / max-w-7xl. */
+const MAX_CONTENT_WIDTH = 1280;
+
+type LoginNavProp = NativeStackNavigationProp<AuthStackParamList>;
+
+// ─── Demo accounts ────────────────────────────────────────────────────────────
 
 interface DemoAccount {
   role: UserRole;
@@ -98,7 +113,7 @@ function GoogleIcon(): React.JSX.Element {
   );
 }
 
-// ─── Apple SVG icon ────────────────────────────────────────────────────────────
+// ─── Apple SVG icon ───────────────────────────────────────────────────────────
 
 function AppleIcon(): React.JSX.Element {
   return (
@@ -108,34 +123,72 @@ function AppleIcon(): React.JSX.Element {
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── ContentWrapper ───────────────────────────────────────────────────────────
+
+/**
+ * Constrains children to MAX_CONTENT_WIDTH and centers them on desktop.
+ * On mobile it passes through as a plain View with no max-width constraint.
+ */
+function ContentWrapper({
+  children,
+  style,
+  isDesktop,
+}: {
+  children: React.ReactNode;
+  style?: object;
+  isDesktop: boolean;
+}): React.JSX.Element {
+  if (!isDesktop) {
+    return <View style={style}>{children}</View>;
+  }
+  return (
+    <View
+      style={[
+        {
+          maxWidth: MAX_CONTENT_WIDTH,
+          width: '100%',
+          alignSelf: 'center',
+          paddingHorizontal: 48,
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+// ─── LoginScreen ──────────────────────────────────────────────────────────────
 
 /**
  * LoginScreen handles both sign-in and sign-up in a single toggle view.
+ *
  * On successful auth the AuthContext state change triggers AppNavigator
  * to swap to the authenticated stack — no explicit navigation call needed.
+ *
+ * On desktop (≥1024 px) the layout mirrors Lovable's 2-column /auth page:
+ *   - Left: marketing headline + value props
+ *   - Right: auth form card (max-width 450)
  */
 export function LoginScreen(): React.JSX.Element {
   const { login, register, loginMock } = useAuth();
+  const navigation = useNavigation<LoginNavProp>();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= DESKTOP_BREAKPOINT;
 
   const [isSignUp, setIsSignUp] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Submit handler ────────────────────────────────────────────────────────
+  // ── Submit handler ───────────────────────────────────────────────────────
 
   const handleSubmit = useCallback(async (): Promise<void> => {
     Keyboard.dismiss();
     if (!email.trim() || !password.trim()) {
       setError('Email and password are required.');
-      return;
-    }
-    if (isSignUp && !name.trim()) {
-      setError('Full name is required.');
       return;
     }
 
@@ -144,7 +197,9 @@ export function LoginScreen(): React.JSX.Element {
 
     try {
       if (isSignUp) {
-        await register(email.trim(), password, name.trim(), 'chw');
+        // Derive a display name from the local part of the email address.
+        const derivedName = email.trim().split('@')[0];
+        await register(email.trim(), password, derivedName, 'chw');
       } else {
         await login(email.trim(), password);
       }
@@ -155,9 +210,9 @@ export function LoginScreen(): React.JSX.Element {
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, name, isSignUp, login, register]);
+  }, [email, password, isSignUp, login, register]);
 
-  // ── Demo login ────────────────────────────────────────────────────────────
+  // ── Demo login ───────────────────────────────────────────────────────────
 
   const handleDemoLogin = useCallback(async (account: DemoAccount): Promise<void> => {
     setIsLoading(true);
@@ -166,14 +221,14 @@ export function LoginScreen(): React.JSX.Element {
     try {
       await login(account.email, account.password);
     } catch {
-      // Backend unavailable — fall back to mock login (demo mode)
+      // Backend unavailable — fall back to mock login (demo mode).
       await loginMock(account.role, account.name);
     } finally {
       setIsLoading(false);
     }
   }, [login, loginMock]);
 
-  // ── Social login (coming soon) ────────────────────────────────────────────
+  // ── Social login (coming soon) ───────────────────────────────────────────
 
   const handleSocialLogin = useCallback((provider: 'Google' | 'Apple'): void => {
     Alert.alert(
@@ -183,259 +238,334 @@ export function LoginScreen(): React.JSX.Element {
     );
   }, []);
 
-  // ── Toggle between sign in / sign up ──────────────────────────────────────
+  // ── Toggle between sign in / sign up ────────────────────────────────────
 
   const toggleMode = useCallback((): void => {
     setIsSignUp((prev) => !prev);
     setError(null);
-    setName('');
     setEmail('');
     setPassword('');
   }, []);
 
+  // ── Navigate back to Landing ─────────────────────────────────────────────
+
+  const handleNavToLanding = useCallback((): void => {
+    navigation.navigate('Landing');
+  }, [navigation]);
+
+  // ── Derived layout values ────────────────────────────────────────────────
+
+  const headlineFontSize = isDesktop ? 72 : 40;
+  const headlineLineHeight = isDesktop ? 76 : 44;
+
   return (
-    <SafeAreaView style={s.safeArea}>
+    <SafeAreaView style={s.safeArea} edges={['top']}>
+      {/* ── Sticky navbar ─────────────────────────────────────────────────── */}
+      <View style={[s.navbar, isDesktop && s.navbarDesktop]}>
+        <ContentWrapper isDesktop={isDesktop} style={s.navbarInner}>
+          {/* Left: compass icon + wordmark */}
+          <TouchableOpacity
+            style={s.navbarLeft}
+            onPress={handleNavToLanding}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Go to home"
+          >
+            <Image source={compassIcon} style={s.navLogo} accessibilityIgnoresInvertColors />
+            <Text style={s.navWordmark}>
+              Compass<Text style={s.navWordmarkAccent}>CHW</Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* Desktop-only center nav links */}
+          {isDesktop && (
+            <View style={s.navbarCenter}>
+              <TouchableOpacity
+                style={s.navLink}
+                onPress={handleNavToLanding}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Home"
+              >
+                <Text style={s.navLinkText}>Home</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.navLink}
+                onPress={handleNavToLanding}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Services"
+              >
+                <Text style={s.navLinkText}>Services</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.navLink}
+                onPress={handleNavToLanding}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="How It Works"
+              >
+                <Text style={s.navLinkText}>How It Works</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.navLink}
+                onPress={handleNavToLanding}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="For CHWs"
+              >
+                <Text style={s.navLinkText}>For CHWs</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Spacer on mobile so wordmark stays left-aligned */}
+          {!isDesktop && <View />}
+        </ContentWrapper>
+      </View>
+
+      {/* ── Scrollable body ───────────────────────────────────────────────── */}
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
           style={s.flex}
-          contentContainerStyle={s.scrollContent}
+          contentContainerStyle={[
+            s.scrollContent,
+            { paddingHorizontal: isDesktop ? 0 : spacing.lg },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Logo wordmark ─────────────────────────────────────────────── */}
-          <View style={s.logoRow}>
-            <Image source={compassIcon} style={s.logoIcon} />
-            <Text style={s.wordmark}>
-              Compass<Text style={s.wordmarkAccent}>CHW</Text>
-            </Text>
-          </View>
-
-          {/* ── Marketing copy ────────────────────────────────────────────── */}
-          <View style={s.marketingSection}>
-            <View style={s.eyebrowRow}>
-              <View style={s.eyebrowDot} />
-              <Text style={s.eyebrowText}>START YOUR CHW JOURNEY</Text>
-            </View>
-
-            <Text style={s.headline}>
-              Your career in community health{' '}
-              <Text style={s.headlineAccent}>starts here.</Text>
-            </Text>
-
-            <Text style={s.subheadline}>
-              Join Compass and start earning by connecting with community members
-              who need your help navigating housing, food, recovery, and healthcare.
-            </Text>
-
-            <View style={s.valuePropsContainer}>
-              {VALUE_PROPS.map((prop) => (
-                <View key={prop} style={s.valuePropRow}>
-                  <View style={s.valuePropIcon}>
-                    <ArrowRight size={12} color={colors.primary} />
-                  </View>
-                  <Text style={s.valuePropText}>{prop}</Text>
+          {/* ── 2-column content area ──────────────────────────────────────── */}
+          <ContentWrapper isDesktop={isDesktop} style={s.contentWrapper}>
+            <View
+              style={[
+                s.twoColumnRow,
+                {
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  gap: isDesktop ? 64 : 40,
+                },
+              ]}
+            >
+              {/* ── LEFT COLUMN — marketing copy ──────────────────────────── */}
+              <View style={[s.leftColumn, isDesktop && s.leftColumnDesktop]}>
+                {/* Eyebrow */}
+                <View style={s.eyebrowRow}>
+                  <View style={s.eyebrowDot} />
+                  <Text style={s.eyebrowText}>START YOUR CHW JOURNEY</Text>
                 </View>
-              ))}
-            </View>
-          </View>
 
-          {/* ── Auth card ─────────────────────────────────────────────────── */}
-          <View style={[s.card, shadows.elevated]}>
-            {/* Gradient top bar: primary → compassNude */}
-            <View style={s.cardGradientBar}>
-              <View style={s.cardGradientLeft} />
-              <View style={s.cardGradientRight} />
-            </View>
-
-            <View style={s.cardBody}>
-              {/* Heading */}
-              <View style={s.cardHeader}>
-                <Text style={s.cardTitle}>
-                  {isSignUp ? 'Create your account' : 'Welcome back'}
-                </Text>
-                <Text style={s.cardSubtitle}>
-                  {isSignUp
-                    ? 'Sign up to start earning as a Community Health Worker.'
-                    : 'Sign in to access your Compass dashboard.'}
-                </Text>
-              </View>
-
-              {/* Error message */}
-              {error !== null && (
-                <View style={s.errorContainer}>
-                  <Text style={s.errorText}>{error}</Text>
-                </View>
-              )}
-
-              {/* Social login buttons */}
-              <View style={s.socialButtonsContainer}>
-                <TouchableOpacity
-                  style={s.socialButton}
-                  onPress={() => handleSocialLogin('Google')}
-                  activeOpacity={0.7}
-                  accessibilityLabel="Continue with Google"
-                  accessibilityRole="button"
+                {/* Headline */}
+                <Text
+                  style={[
+                    s.headline,
+                    {
+                      fontSize: headlineFontSize,
+                      lineHeight: headlineLineHeight,
+                    },
+                  ]}
                 >
-                  <GoogleIcon />
-                  <Text style={s.socialButtonText}>Continue with Google</Text>
-                </TouchableOpacity>
+                  Your career in community health{' '}
+                  <Text style={s.headlineAccent}>starts here.</Text>
+                </Text>
 
-                <TouchableOpacity
-                  style={s.socialButton}
-                  onPress={() => handleSocialLogin('Apple')}
-                  activeOpacity={0.7}
-                  accessibilityLabel="Continue with Apple"
-                  accessibilityRole="button"
-                >
-                  <AppleIcon />
-                  <Text style={s.socialButtonText}>Continue with Apple</Text>
-                </TouchableOpacity>
+                {/* Description */}
+                <Text style={s.description}>
+                  Join Compass and start earning by connecting with community members
+                  who need your help navigating housing, food, recovery, and healthcare.
+                </Text>
+
+                {/* Value props */}
+                <View style={s.valuePropsContainer}>
+                  {VALUE_PROPS.map((prop) => (
+                    <View key={prop} style={s.valuePropRow}>
+                      <View style={s.valuePropIcon}>
+                        <ArrowRight size={12} color={colors.primary} />
+                      </View>
+                      <Text style={s.valuePropText}>{prop}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
 
-              {/* OR divider */}
-              <View style={s.dividerRow}>
-                <View style={s.dividerLine} />
-                <Text style={s.dividerLabel}>OR</Text>
-                <View style={s.dividerLine} />
-              </View>
-
-              {/* Name input (sign-up only) */}
-              {isSignUp && (
-                <View style={s.inputGroup}>
-                  <Text style={s.inputLabel}>FULL NAME</Text>
-                  <View style={s.inputWrapper}>
-                    <Mail size={16} color={colors.mutedForeground} style={s.inputIcon} />
-                    <TextInput
-                      style={s.textInput}
-                      placeholder="Your full name"
-                      placeholderTextColor={`${colors.mutedForeground}88`}
-                      value={name}
-                      onChangeText={setName}
-                      autoComplete="name"
-                      autoCapitalize="words"
-                      returnKeyType="next"
-                      editable={!isLoading}
-                      accessibilityLabel="Full name"
-                    />
+              {/* ── RIGHT COLUMN — auth form card ─────────────────────────── */}
+              <View style={[s.rightColumn, isDesktop && s.rightColumnDesktop]}>
+                <View style={[s.card, shadows.elevated]}>
+                  {/* Gradient top bar: primary → compassNude (two-segment approximation) */}
+                  <View style={s.cardGradientBar}>
+                    <View style={s.cardGradientLeft} />
+                    <View style={s.cardGradientRight} />
                   </View>
-                </View>
-              )}
 
-              {/* Email input */}
-              <View style={s.inputGroup}>
-                <Text style={s.inputLabel}>EMAIL ADDRESS</Text>
-                <View style={s.inputWrapper}>
-                  <Mail size={16} color={colors.mutedForeground} style={s.inputIcon} />
-                  <TextInput
-                    style={s.textInput}
-                    placeholder="maria@example.com"
-                    placeholderTextColor={`${colors.mutedForeground}88`}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    returnKeyType="next"
-                    editable={!isLoading}
-                    accessibilityLabel="Email address"
-                  />
-                </View>
-              </View>
+                  <View style={s.cardBody}>
+                    {/* Heading */}
+                    <View style={s.cardHeader}>
+                      <Text style={s.cardTitle}>
+                        {isSignUp ? 'Create your account' : 'Welcome back'}
+                      </Text>
+                      <Text style={s.cardSubtitle}>
+                        {isSignUp
+                          ? 'Sign up to start earning as a Community Health Worker.'
+                          : 'Sign in to access your Compass dashboard.'}
+                      </Text>
+                    </View>
 
-              {/* Password input */}
-              <View style={s.inputGroup}>
-                <Text style={s.inputLabel}>PASSWORD</Text>
-                <View style={s.inputWrapper}>
-                  <Lock size={16} color={colors.mutedForeground} style={s.inputIcon} />
-                  <TextInput
-                    style={[s.textInput, s.passwordInput]}
-                    placeholder="••••••••"
-                    placeholderTextColor={`${colors.mutedForeground}88`}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                    returnKeyType="done"
-                    onSubmitEditing={handleSubmit}
-                    editable={!isLoading}
-                    accessibilityLabel="Password"
-                  />
-                  <Pressable
-                    onPress={() => setShowPassword((prev) => !prev)}
-                    style={s.eyeButton}
-                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                    accessibilityRole="button"
-                  >
-                    {showPassword ? (
-                      <EyeOff size={16} color={colors.mutedForeground} />
-                    ) : (
-                      <Eye size={16} color={colors.mutedForeground} />
+                    {/* Error message */}
+                    {error !== null && (
+                      <View style={s.errorContainer}>
+                        <Text style={s.errorText}>{error}</Text>
+                      </View>
                     )}
-                  </Pressable>
+
+                    {/* Social login buttons */}
+                    <View style={s.socialButtonsContainer}>
+                      <TouchableOpacity
+                        style={s.socialButton}
+                        onPress={() => handleSocialLogin('Google')}
+                        activeOpacity={0.7}
+                        accessibilityLabel="Continue with Google"
+                        accessibilityRole="button"
+                      >
+                        <GoogleIcon />
+                        <Text style={s.socialButtonText}>Continue with Google</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={s.socialButton}
+                        onPress={() => handleSocialLogin('Apple')}
+                        activeOpacity={0.7}
+                        accessibilityLabel="Continue with Apple"
+                        accessibilityRole="button"
+                      >
+                        <AppleIcon />
+                        <Text style={s.socialButtonText}>Continue with Apple</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* OR divider */}
+                    <View style={s.dividerRow}>
+                      <View style={s.dividerLine} />
+                      <Text style={s.dividerLabel}>OR</Text>
+                      <View style={s.dividerLine} />
+                    </View>
+
+                    {/* Email input */}
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>EMAIL ADDRESS</Text>
+                      <View style={s.inputWrapper}>
+                        <Mail size={16} color={colors.mutedForeground} style={s.inputIcon} />
+                        <TextInput
+                          style={s.textInput}
+                          placeholder="maria@example.com"
+                          placeholderTextColor={`${colors.mutedForeground}88`}
+                          value={email}
+                          onChangeText={setEmail}
+                          autoCapitalize="none"
+                          autoComplete="email"
+                          keyboardType="email-address"
+                          returnKeyType="next"
+                          editable={!isLoading}
+                          accessibilityLabel="Email address"
+                        />
+                      </View>
+                    </View>
+
+                    {/* Password input */}
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>PASSWORD</Text>
+                      <View style={s.inputWrapper}>
+                        <Lock size={16} color={colors.mutedForeground} style={s.inputIcon} />
+                        <TextInput
+                          style={[s.textInput, s.passwordInput]}
+                          placeholder="••••••••"
+                          placeholderTextColor={`${colors.mutedForeground}88`}
+                          value={password}
+                          onChangeText={setPassword}
+                          secureTextEntry={!showPassword}
+                          autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                          returnKeyType="done"
+                          onSubmitEditing={handleSubmit}
+                          editable={!isLoading}
+                          accessibilityLabel="Password"
+                        />
+                        <Pressable
+                          onPress={() => setShowPassword((prev) => !prev)}
+                          style={s.eyeButton}
+                          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                          accessibilityRole="button"
+                        >
+                          {showPassword ? (
+                            <EyeOff size={16} color={colors.mutedForeground} />
+                          ) : (
+                            <Eye size={16} color={colors.mutedForeground} />
+                          )}
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    {/* Primary submit button */}
+                    <TouchableOpacity
+                      style={[s.submitButton, isLoading && s.submitButtonDisabled]}
+                      onPress={handleSubmit}
+                      disabled={isLoading}
+                      activeOpacity={0.85}
+                      accessibilityLabel={isSignUp ? 'Create account' : 'Sign in'}
+                      accessibilityRole="button"
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={s.submitButtonText}>
+                          {isSignUp ? 'Create Account' : 'Sign In'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+
+                    {/* Toggle sign in / sign up */}
+                    <View style={s.toggleRow}>
+                      <Text style={s.toggleText}>
+                        {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={toggleMode}
+                        accessibilityRole="button"
+                        accessibilityLabel={isSignUp ? 'Switch to sign in' : 'Switch to sign up'}
+                      >
+                        <Text style={s.toggleLink}>
+                          {isSignUp ? 'Sign in' : 'Sign up'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* ── Demo buttons (below card, border-only) ─────────────── */}
+                <View style={s.demoDividerRow}>
+                  <View style={s.dividerLine} />
+                  <Text style={s.demoDividerLabel}>DEMO</Text>
+                  <View style={s.dividerLine} />
+                </View>
+
+                <View style={s.demoButtonsRow}>
+                  {DEMO_ACCOUNTS.map((account) => (
+                    <TouchableOpacity
+                      key={account.role}
+                      style={s.demoButton}
+                      onPress={() => handleDemoLogin(account)}
+                      disabled={isLoading}
+                      activeOpacity={0.7}
+                      accessibilityLabel={account.label}
+                      accessibilityRole="button"
+                    >
+                      <Text style={s.demoButtonText}>{account.label}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
-
-              {/* Primary submit button */}
-              <TouchableOpacity
-                style={[s.submitButton, isLoading && s.submitButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-                activeOpacity={0.85}
-                accessibilityLabel={isSignUp ? 'Create account' : 'Sign in'}
-                accessibilityRole="button"
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={s.submitButtonText}>
-                    {isSignUp ? 'Create Account' : 'Sign In'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              {/* Toggle sign in / sign up */}
-              <View style={s.toggleRow}>
-                <Text style={s.toggleText}>
-                  {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-                </Text>
-                <TouchableOpacity
-                  onPress={toggleMode}
-                  accessibilityRole="button"
-                  accessibilityLabel={isSignUp ? 'Switch to sign in' : 'Switch to sign up'}
-                >
-                  <Text style={s.toggleLink}>
-                    {isSignUp ? 'Sign in' : 'Sign up'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
-          </View>
-
-          {/* ── Demo buttons (below card, border-only) ────────────────────── */}
-          <View style={s.demoDividerRow}>
-            <View style={s.dividerLine} />
-            <Text style={s.demoDividerLabel}>DEMO</Text>
-            <View style={s.dividerLine} />
-          </View>
-
-          <View style={s.demoButtonsRow}>
-            {DEMO_ACCOUNTS.map((account) => (
-              <TouchableOpacity
-                key={account.role}
-                style={s.demoButton}
-                onPress={() => handleDemoLogin(account)}
-                disabled={isLoading}
-                activeOpacity={0.7}
-                accessibilityLabel={account.label}
-                accessibilityRole="button"
-              >
-                <Text style={s.demoButtonText}>{account.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          </ContentWrapper>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -452,38 +582,93 @@ const s = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.lg,
-  },
 
-  // ── Logo ──────────────────────────────────────────────────────────────────
-  logoRow: {
+  // ── Navbar ────────────────────────────────────────────────────────────────
+  navbar: {
+    height: 64,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    justifyContent: 'center',
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.foreground,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  navbarDesktop: {
+    height: 64,
+  },
+  navbarInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+  },
+  navbarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  logoIcon: {
+  navLogo: {
     width: 28,
     height: 28,
-    borderRadius: 6,
+    borderRadius: 7,
   },
-  wordmark: {
+  navWordmark: {
     fontFamily: fonts.display,
-    fontSize: 22,
+    fontSize: 20,
     color: colors.foreground,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
-  wordmarkAccent: {
+  navWordmarkAccent: {
     color: colors.secondary,
   },
+  navbarCenter: {
+    flexDirection: 'row',
+    gap: 32,
+    alignItems: 'center',
+  },
+  navLink: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  navLinkText: {
+    fontSize: 14,
+    fontFamily: fonts.body,
+    color: colors.mutedForeground,
+  },
 
-  // ── Marketing section ─────────────────────────────────────────────────────
-  marketingSection: {
+  // ── Scroll / content ──────────────────────────────────────────────────────
+  scrollContent: {
+    flexGrow: 1,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxl,
+  },
+  contentWrapper: {
+    // Additional styles applied inline via ContentWrapper + paddingHorizontal
+  },
+
+  // ── 2-column row ──────────────────────────────────────────────────────────
+  twoColumnRow: {
+    alignItems: 'center',
+  },
+
+  // ── Left column (marketing copy) ─────────────────────────────────────────
+  leftColumn: {
+    width: '100%',
     gap: spacing.md,
+  },
+  leftColumnDesktop: {
+    flex: 1,
+    gap: spacing.lg,
   },
   eyebrowRow: {
     flexDirection: 'row',
@@ -491,8 +676,8 @@ const s = StyleSheet.create({
     gap: spacing.sm,
   },
   eyebrowDot: {
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderRadius: radii.full,
     backgroundColor: colors.secondary,
   },
@@ -501,25 +686,25 @@ const s = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.2,
     color: colors.mutedForeground,
+    textTransform: 'uppercase',
   },
   headline: {
     fontFamily: fonts.display,
-    fontSize: 36,
-    lineHeight: 42,
-    letterSpacing: -1,
+    letterSpacing: -2,
     color: colors.foreground,
   },
   headlineAccent: {
     color: colors.secondary,
   },
-  subheadline: {
+  description: {
     fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 26,
     color: colors.mutedForeground,
+    maxWidth: 480,
   },
   valuePropsContainer: {
-    gap: spacing.sm + 2,
+    gap: spacing.sm + 4,
     marginTop: spacing.xs,
   },
   valuePropRow: {
@@ -528,8 +713,8 @@ const s = StyleSheet.create({
     gap: spacing.md,
   },
   valuePropIcon: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     borderRadius: radii.full,
     backgroundColor: `${colors.primary}18`,
     alignItems: 'center',
@@ -538,9 +723,20 @@ const s = StyleSheet.create({
   },
   valuePropText: {
     fontFamily: fonts.body,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.foreground,
     flex: 1,
+  },
+
+  // ── Right column (form card) ──────────────────────────────────────────────
+  rightColumn: {
+    width: '100%',
+    gap: spacing.md,
+  },
+  rightColumnDesktop: {
+    width: 450,
+    flexShrink: 0,
+    gap: spacing.md,
   },
 
   // ── Auth card ─────────────────────────────────────────────────────────────
@@ -551,7 +747,7 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
-  // Two-segment color bar simulating a gradient (primary → compassNude)
+  // Two-segment color bar simulating a CSS gradient (primary → compassNude)
   cardGradientBar: {
     height: 3,
     flexDirection: 'row',
@@ -574,7 +770,7 @@ const s = StyleSheet.create({
   },
   cardTitle: {
     fontFamily: fonts.displaySemibold,
-    fontSize: 22,
+    fontSize: 24,
     color: colors.foreground,
   },
   cardSubtitle: {
@@ -697,7 +893,7 @@ const s = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // ── Toggle ────────────────────────────────────────────────────────────────
+  // ── Toggle sign in / sign up ──────────────────────────────────────────────
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -721,6 +917,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    marginTop: spacing.xs,
   },
   demoDividerLabel: {
     fontFamily: fonts.bodySemibold,
