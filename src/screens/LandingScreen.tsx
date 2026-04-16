@@ -987,10 +987,10 @@ export function LandingScreen(): React.JSX.Element {
                   style={[staticStyles.sectionCta, { marginTop: spacing.md }]}
                   onPress={handleWaitlistPress}
                   activeOpacity={0.85}
-                  accessibilityLabel="Get the App"
+                  accessibilityLabel="Join Waitlist"
                   accessibilityRole="button"
                 >
-                  <Text style={staticStyles.sectionCtaText}>Get the App</Text>
+                  <Text style={staticStyles.sectionCtaText}>Join Waitlist</Text>
                   <ArrowRight size={16} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
